@@ -1,12 +1,12 @@
 import { Client } from 'boardgame.io/react';
 import { TicTacToe } from './Game';
 import { Local } from 'boardgame.io/multiplayer';
-import { Board }  from './Board';
+import  TBoard   from './Board';
 
 
 const TicTacToeClient = Client({
   game: TicTacToe,
-  board: Board,
+  board: TBoard,
   multiplayer: Local(),
 });
 

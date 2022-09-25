@@ -1,0 +1,39 @@
+
+
+/* 
+#infoBody
+{
+  float: left;
+  width: 20%;
+} */
+#boardBody{
+  width: 50%;
+}
+
+
+
+rect.active {
+  cursor: pointer;
+  fill: #eeffe9;
+}
+
+rect.active:hover {
+  fill: #eeffff;
+}
+
+rect.highlight {
+  cursor: pointer;
+  fill: #e0194e;
+}
+
+circle.piece0 {
+  
+  
+  fill: rgb(17, 151, 223);
+  
+}
+circle.piece1 {
+  
+  fill: rgb(240, 148, 1);
+  
+}
