@@ -2,29 +2,33 @@ import { Ctx, Game } from 'boardgame.io';
 import { INVALID_MOVE } from 'boardgame.io/core';
 import { Interface } from 'readline';
 
-
+export type P_ID='0'|'1'
 
 export interface GameState {
-  playerID:string,
-  opponentID:string,
-  cells: (ObjInstance | null)[];
+  myID:P_ID,
+  opponentID:P_ID,
+  cells: (ObjInstance | null)[],
+  places:(Stronghold|null)[],
 }
-function dualPlayerID(id:string|null){
+function dualPlayerID(id:P_ID){
   switch (id){
     case '0': return '1';
     case '1': return '0';
-    default: return "none"
   }
 }
 export const TicTacToe: Game<GameState> = {
   setup: () => {
     let eCells = Array(BoardSize.mx * BoardSize.my).fill(null);
-    eCells[0] = newPiece(0,"Infantry",'0');
-    eCells[1] = newPiece(1,"Cavalry",'1');
-    return { playerID:"none",opponentID:"none", cells: eCells };
+    eCells[0] = newPiece("Infantry",'0');
+    eCells[1] = newPiece("Cavalry",'1');
+    eCells[2] = newPiece("Artillery",'1');
+    let ePlaces=Array(BoardSize.mx * BoardSize.my).fill(null);
+    ePlaces[0]=newStronghold("Arsenal",'0');
+    ePlaces[Pos2CId(4,3)]=newStronghold("Fortress");
+    return { myID:"0",opponentID:"1", cells: eCells ,places:ePlaces};
   },
   playerView: (G, ctx, playerID) => {
-    return {...G, playerID: playerID, opponentID:dualPlayerID(playerID)};
+    return {...G, myID: playerID, opponentID:dualPlayerID(playerID as P_ID)};
   },
   turn: {
     minMoves: 1,
@@ -38,6 +42,7 @@ export const TicTacToe: Game<GameState> = {
         if (obj!==null&&canPick(G, ctx, stCId) && canPut(G, ctx, stCId, obj , edCId)) {
         G.cells[stCId] = null;
         G.cells[edCId] = obj;
+        update(G);
       }
       else
         return INVALID_MOVE;
@@ -53,18 +58,21 @@ export const TicTacToe: Game<GameState> = {
     }
   }, */
 
-  ai: {
-    enumerate: (G, ctx) => {
-      let moves = [];
-      for (let i = 0; i < 9; i++) {
-        if (G.cells[i] === null) {
-          moves.push({ move: 'clickCell', args: [i] });
-        }
-      }
-      return moves;
-    },
-  },
 };
+
+//update game 
+function update(G:GameState){
+  //check capture the stronghold
+  G.places.forEach((strong,CId) => {
+    if (strong===null) {}
+    else if (strong.placeType==="Arsenal"){}
+    else {let obj=G.cells[CId]
+      if (obj===null) {strong.belong=null;}
+      else {strong.belong=obj.belong}
+    }
+    
+  });
+}
 
 // Position and distance functions
 
@@ -73,10 +81,10 @@ interface Position {
   y: number
 }
 
-export const BoardSize = { mx: 6, my: 5 }
+export const BoardSize = { mx: 5, my: 4 }
 
-export function Pos2CId(p: Position): number {
-  return p.y * BoardSize.mx + p.x
+export function Pos2CId(x:number,y:number): number {
+  return y * BoardSize.mx + x
 
 }
 
@@ -122,22 +130,24 @@ function isInRange(pos:Position,oPos:Position,obj:ObjInstance):boolean{
 //Game Object
 
 type Entity = number
-type ObjType = "Infantry" | "Cavalry"|"Artillery"
+type ObjType = "Infantry"|"Cavalry"|"Artillery"
 interface ObjData {
   readonly objType: ObjType,
   readonly objRender: string, //emoji
   readonly speed:number,
   readonly range:number,
   readonly offense: number,
-  readonly offenseOnCharge?:number,
+  //readonly offenseOnCharge?:number, +3 for "Cavalry"
   readonly defense: number,
-  readonly defenseInMountain:number,
-  readonly defenseInFort:number
+  //readonly defenseInMountain:number, +2 for "Infantry" and "Artillery"
+  //readonly defenseInFort:number +4
 }
 export interface ObjInstance extends ObjData {
-  entity: Entity,
-  belong: string | null,
+  //entity: Entity,
+  belong: P_ID | null,
 }
+
+
 
 
 type Type2ObjData ={
@@ -151,8 +161,7 @@ const dataList: Type2ObjData={
   range: 2,
   offense:4,
   defense:6,
-  defenseInMountain:8,
-  defenseInFort:10
+  
 },
 "Cavalry":{
   objType: "Cavalry",
@@ -160,10 +169,7 @@ const dataList: Type2ObjData={
   speed: 2,
   range: 2,
   offense:4,
-  offenseOnCharge:7,
   defense:5,
-  defenseInMountain:5,
-  defenseInFort:5
 },
 "Artillery":{
   objType: "Artillery",
@@ -172,15 +178,31 @@ const dataList: Type2ObjData={
   range: 3,
   offense:5,
   defense:8,
-  defenseInMountain:10,
-  defenseInFort:12
 }
 }
 
-function newPiece(ent:Entity, type: ObjType ,be:string):ObjInstance{
+function newPiece( type: ObjType,be:P_ID|null=null):ObjInstance{
   const objData= dataList[type]
   return {...objData,
-    entity:ent,
+    //entity:ent,
     belong:be
   }
+}
+
+type StrongholdType = "Arsenal"|"Pass"|"Fortress"
+interface Stronghold{
+  readonly placeType: StrongholdType,
+  readonly placeRender: string
+  belong: P_ID|null
+}
+
+function newStronghold(type:StrongholdType, belong:P_ID|null =null):Stronghold{
+  function renderByType(t:StrongholdType):string{
+    switch (t){
+      case "Arsenal": return "🏭";
+      case "Pass":return "🛣";
+      case "Fortress": return "🏰";
+    }
+  }
+  return {placeType:type, placeRender:renderByType(type),belong:belong}
 }
