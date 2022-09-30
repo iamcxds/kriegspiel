@@ -19,13 +19,18 @@ There is another digital implementation: [Kriegspiel](http://r-s-g.org/kriegspie
 Current developing screenshot:
 ![screenshot](resource/battleVeiw.png)
 ![screenshot](resource/supply.png)
+![screenshot](resource/retreat1.png)
+![screenshot](resource/retreat2.png)
 
 - [x] update function
-- [x] supply line
-- [ ] moves records
-- [ ] attack mechanics
+- [x] supply lines
+- [x] moves records
+- [x] attack mechanics
 - [ ] move anim
-- [x] get the charged cavalries
-- [x] battle value
 - [ ] Editor?
+
+## The Ambiguity of Rule (my setting)
+
+- Will enemy units block fire lines? i.e. can I attack back-line units? (no, yes)
+- Will offline enemy units block communication lines? will the retreating unit do? (no, yes)
   

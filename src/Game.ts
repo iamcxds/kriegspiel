@@ -10,7 +10,10 @@ export interface GameState {
   //opponentID:P_ID,
   cells: (ObjInstance | null)[],
   places: (Stronghold | null)[],
-  inSupply: { [key in P_ID]: boolean[] }
+  inSupply: { [key in P_ID]: boolean[] },
+  moveRecords: { [key in P_ID]: [number, number][] }, //(stCId,edCId)
+  attackRecords: { [key in P_ID]: [number, ObjInstance] | null },
+  forcedRetreat: { [key in P_ID]: [(number | null), (number | null)] },//the start and end of retreat CId,
 }
 export function dualPlayerID(id: P_ID) {
   switch (id) {
@@ -33,12 +36,15 @@ export const TicTacToe: Game<GameState> = {
     ePlaces[9] = newStronghold("Arsenal", '1');
     ePlaces[Pos2CId(4, 3)] = newStronghold("Fortress");
     ePlaces[Pos2CId(3, 3)] = newStronghold("Mountain");
-    let initGame = {
+    let initGame: GameState = {
       cells: eCells, places: ePlaces,
       inSupply: {
         '0': Array(BoardSize.mx * BoardSize.my).fill(false),
         '1': Array(BoardSize.mx * BoardSize.my).fill(false)
-      }
+      },
+      moveRecords: { 0: [], 1: [] },
+      attackRecords: { 0: null, 1: null },
+      forcedRetreat: { 0: [null, null], 1: [null, null] }
     }
     update(initGame, ctx);
     return initGame;
@@ -47,23 +53,73 @@ export const TicTacToe: Game<GameState> = {
     return {...G, myID: playerID, opponentID:dualPlayerID(playerID as P_ID)};
   }, */
   turn: {
-
+    onBegin(G, ctx) {
+      const cPlayer = ctx.currentPlayer as P_ID
+      G.moveRecords[cPlayer] = [];
+      G.attackRecords[cPlayer] = null;
+      const retreatSt = G.forcedRetreat[cPlayer][0]
+      //if nowhere to retreat
+      if (retreatSt !== null && moveRange(G, retreatSt, 1).length === 0) {//capture
+        G.cells[retreatSt] = null;
+        G.forcedRetreat[cPlayer] = [null, null];
+      }
+    },
+    onEnd(G, ctx) {
+      const cPlayer = ctx.currentPlayer as P_ID
+      const retreatEd = G.forcedRetreat[cPlayer][1]
+      //retreating target
+      if (retreatEd !== null) {
+        const retreatObj = G.cells[retreatEd];
+        if (retreatObj)
+        //end retreating
+        {
+          retreatObj.retreating = false;
+          G.forcedRetreat[cPlayer] = [null, null];
+        }
+      }
+    },
   },
 
   moves: {
     movePiece: (G, ctx, stCId: number, edCId: number) => {
-      let obj = G.cells[stCId]
+      const obj = G.cells[stCId]
+      const cPlayer = ctx.currentPlayer as P_ID
 
       if (obj && canPick(G, ctx, stCId) && canPut(G, ctx, stCId, edCId)) {
         G.cells[stCId] = null;
         //default make it un supplied
         obj.supplied = false;
         G.cells[edCId] = obj;
+        //record move
+        G.moveRecords[cPlayer].push([stCId, edCId])
+
+        const retreatSt = G.forcedRetreat[cPlayer][0]
+        //if this is a retreat
+        if (retreatSt !== null) {
+          G.forcedRetreat[cPlayer] = [null, edCId];
+        }
         update(G, ctx);
       }
       else
         return INVALID_MOVE;
     },
+    attack: (G, ctx, CId: number) => {
+      const cPlayer = ctx.currentPlayer as P_ID
+      const obj = G.cells[CId]
+      const [canAtk, relOff] = canAttack(G, ctx, CId)
+      if (obj && canAtk) {
+        G.attackRecords[cPlayer] = [CId, obj];
+        //force retreat
+        if (relOff === 1) {
+          obj.retreating = true;
+          G.forcedRetreat[obj.belong] = [CId, null];
+        }
+        //capture
+        else { G.cells[CId] = null; }
+        update(G, ctx);
+      }
+      else return INVALID_MOVE;
+    }
   },
 
   /* endIf: (G, ctx) => {
@@ -131,7 +187,7 @@ function updateSuppliedObj(G: GameState) {
   })
 }
 
-function endTurnUpdate(G: GameState) { }
+
 
 
 // Position and distance functions
@@ -141,7 +197,7 @@ interface Position {
   y: number
 }
 
-export const BoardSize = { mx: 10, my: 8 }
+export const BoardSize = { mx: 25, my: 20 }
 
 export function Pos2CId(x: number, y: number): number {
   if (x < 0 || y < 0 || x >= BoardSize.mx || y >= BoardSize.my) { return -1 }
@@ -193,15 +249,27 @@ export function filterCId<T>(a: (T | null)[], filter: (b: T, c: number) => boole
 }
 
 export function canPick(G: GameState, ctx: Ctx, CId: number) {
-  let obj = G.cells[CId]
-  return obj !== null && obj.belong === ctx.currentPlayer && (obj.supplied || obj.objType === "Relay");
+  const cPlayer = ctx.currentPlayer as P_ID
+  const moveEdRec = G.moveRecords[cPlayer].map((p) => p[1])
+  const retreatSt = G.forcedRetreat[cPlayer][0]
+
+
+  //according the record, not yet attack, each piece has most 1 move, totally 5 moves
+  if (G.attackRecords[cPlayer] !== null || moveEdRec.length >= 5 || moveEdRec.includes(CId)) { return false }
+  //if there is a retreat
+  else if (retreatSt !== null) { return CId === retreatSt; }
+  else {
+    let obj = G.cells[CId]
+    //obj belongs to player, and must be supplied, except relays
+    return obj !== null && obj.belong === cPlayer && (obj.supplied || obj.objType === "Relay");
+  }
 }
 export function canPut(G: GameState, ctx: Ctx, stCId: number, edCId: number) {
   const obj = G.cells[stCId]
   //check obj is on stCells,  in move range
   return obj !== null && moveRange(G, stCId, obj.speed).includes(edCId);
 }
-function moveRange(G: GameState, stCId: number, speed: number): number[] {
+function moveRange(G: GameState, stCId: number, speed: number = 1): number[] {
   let result = [stCId]
   for (let i = 0; i < speed; i++) {
     //for each steps target cell is empty and is not mountain,
@@ -209,6 +277,22 @@ function moveRange(G: GameState, stCId: number, speed: number): number[] {
 
   }
   return result
+}
+
+export function canAttack(G: GameState, ctx: Ctx, CId: number): [boolean, number] {
+  const cPlayer = ctx.currentPlayer as P_ID
+  const obj = G.cells[CId];
+
+  //if one haven't attacked and obj is enemy
+  if (G.attackRecords[cPlayer] === null && obj && obj.belong !== cPlayer) {
+
+    const enemy = obj.belong;
+    const off = getBattleFactor(G, cPlayer, true, CId)[0];
+    const def = getBattleFactor(G, enemy, false, CId)[0];
+    const relOff = off - def
+    return [relOff > 0, relOff]
+  }
+  else { return [false, 0] }
 }
 //search in 米 shape
 function searchInMiShape(G: GameState, CId: number, filter: (obj: ObjInstance | null, id: number) => boolean, min: number = 0, max: number = Math.max(BoardSize.mx, BoardSize.my)): [number[][], Position[][]] {
@@ -259,8 +343,8 @@ export function getChargedCavalries(G: GameState, CId: number): (Position[])[] {
   else {
 
     const chargeRowsLst = searchInMiShape(G, CId, (cObj, cCId) =>
-      //!!!check cObj is a cavalry, a enemy, supplied,not retracted , not in a fortress
-      (cObj !== null && cObj.objType === "Cavalry" && cObj.belong !== belong && cObj.supplied && !cObj.retreated && G.places[cCId]?.placeType !== "Fortress")
+      //!!!check cObj is a cavalry, a enemy, supplied,not retreating , not in a fortress
+      (cObj !== null && cObj.objType === "Cavalry" && cObj.belong !== belong && cObj.supplied && !cObj.retreating && G.places[cCId]?.placeType !== "Fortress")
       , 1, 4)[1]
     return chargeRowsLst
   }
@@ -274,20 +358,20 @@ export function getBattleFactor(G: GameState, player: P_ID, isOffense: boolean, 
   const targetObj = G.cells[CId]
   // filter the unit in 米 shape in its range
   //first filter Out the mountain block,
-  let effectingObjs = searchInMiShape(G, CId, (obj, id) => G.places[id]?.placeType !== "Mountain", 0, 3)[0].flat().filter(
-    (id) => {
-      let obj = G.cells[id];
-      //obj is in range, supplied, belongs to the chosen player,
-      return obj && (isInRange(pos, CId2Pos(id), obj) && obj.supplied && obj.belong === player)
-        //filter out retreated units in offense
-        && !(isOffense && (obj.retreated || obj.offense === 0))
-    }
-  )
+  let effectingObjs =
+    removeDup(searchInMiShape(G, CId, (obj, id) => G.places[id]?.placeType !== "Mountain", 0, 3)[0].flat()).filter(
+      (id) => {
+        let obj = G.cells[id];
+        //obj is in range, supplied, belongs to the chosen player,
+        return obj && (isInRange(pos, CId2Pos(id), obj) && obj.supplied && obj.belong === player)
+          //filter out retreating units in offense
+          && !(isOffense && (obj.retreating || obj.offense === 0))
+      })
   /* filterCId(G.cells,(obj,id)=>
   //obj is in range, supplied, belongs to the chosen player,
   (isInRange(pos,CId2Pos(id),obj)&&obj.supplied&&obj.belong===player)
-  //filter out retreated units in offense
-  &&!(isOffense&&obj.retreated)
+  //filter out retreating units in offense
+  &&!(isOffense&&obj.retreating)
   ) */
 
 
@@ -334,7 +418,7 @@ export function dirSupplyFrom(G: GameState, CId: number, player: P_ID) {
     //filter the objs block the supply lines
     //obj is enemy, has offense factor, is supplied, not retreat
     //and mountains also block
-    !(obj && obj.belong !== player && obj.offense > 0 && obj.supplied && !obj.retreated) && (G.places[id]?.placeType !== "Mountain"))
+    !(obj && obj.belong !== player && obj.offense > 0 && obj.supplied) && (G.places[id]?.placeType !== "Mountain"))
   return result[0]
 }
 
@@ -359,7 +443,7 @@ export function getSuppliedCells(G: GameState, player: P_ID): number[] {
   const myPieceDirSupplied = myPieceLst.filter((id) => dirSupplied.includes(id))
 
   const mySuppliedPieces = connectedComponents(myPieceLst, myPieceDirSupplied)
-  
+
   return mySuppliedPieces
 }
 
@@ -384,7 +468,7 @@ export interface ObjInstance extends ObjData {
   //entity: Entity,
   belong: P_ID,
   supplied: boolean,
-  retreated: boolean,
+  retreating: boolean,
 }
 
 
@@ -464,7 +548,7 @@ function newPiece(type: ObjType, be: P_ID): ObjInstance {
     //entity:ent,
     belong: be,
     supplied: true,
-    retreated: false
+    retreating: false
   }
 }
 

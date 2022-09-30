@@ -114,9 +114,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   return (
     <main>
       <h1>Kriegspiel</h1>
-      <div style={{ width: "100%", border: "3px solid #73AD21", content:"", clear:"both", display: "table" }}>
+      <div style={{ width: "99%", border: "3px solid #73AD21", content:"", clear:"both", display: "table" }}>
         
-        <div style={{ width: "60%" , float: "left" }}>
+        <div style={{ width: "80%" , float: "left" }}>
           <svg viewBox={`-0.5 -0.5 ${Game.BoardSize.mx + 1} ${Game.BoardSize.my + 1}`}>
 
             {/* background */}
@@ -131,27 +131,35 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             {/* supply line */}
             {Game.getDirSuppliedLines(G, '0')[1].map((lines) => lines.map((lineLst) => {
               
-              let stPos = Game.CId2Pos(lineLst[0]);
+             /*  let stPos = Game.CId2Pos(lineLst[0]);
               let edPos = Game.CId2Pos(lineLst[lineLst.length - 1]);
               return stPos && edPos && gTranslate(<line x1={stPos.x} y1={stPos.y} x2={edPos.x} y2={edPos.y} stroke={fictionColor('0')} stroke-width="0.1" stroke-dasharray="0.5 0.1" />, 0.45, 0.45)
+             */
+             return lines.length>1&&gTranslate(drawLine(lineLst[0],lineLst[lineLst.length - 1], fictionColor('0'), 0.1, [0.5,0.1]),-0.05,-0.05)
             }))}
             {Game.getDirSuppliedLines(G, '1')[1].map((lines) => lines.map((lineLst) => {
               
-              let stPos = Game.CId2Pos(lineLst[0]);
-              let edPos = Game.CId2Pos(lineLst[lineLst.length - 1]);
-              return stPos && edPos && gTranslate(<line x1={stPos.x} y1={stPos.y} x2={edPos.x} y2={edPos.y} stroke={fictionColor('1')} stroke-width="0.1" stroke-dasharray="0.5 0.1" />, 0.55, 0.55)
+              return lines.length>1&&gTranslate(drawLine(lineLst[0],lineLst[lineLst.length - 1], fictionColor('1'), 0.1, [0.5,0.1]),0.05,0.05)
             }))}
             {/* stronghold */}
             {renderLayer((stronghold, id) => <>{stronghold && renderStr(stronghold.placeRender, 1)}</>, G.places)}
+            {/* move indication */}
+            {G.moveRecords['0'].map(([st,ed])=>drawLine(st,ed,pico8Palette.dark_blue,0.5,[0.3,0.1]))}
+            {G.moveRecords['1'].map(([st,ed])=>drawLine(st,ed,pico8Palette.brown,0.5,[0.3,0.1]))}
+            
             {/* piece */}
             {renderLayer((obj, id) => <>{obj && renderPiece(obj)}</>, G.cells)}
+            {/* attack */}
+            { [G.attackRecords['0'],G.attackRecords['1']].map((atk)=>
+              atk!==null&&gTranslate(renderStr("💥",0.7), Game.CId2Pos(atk[0]).x , Game.CId2Pos(atk[0]).y)
+            )}
             {/* charge */}
             {renderLayer((obj, id) => <>{obj && Game.getChargedCavalries(G, id).map((chargeRow) =>
               chargeRow.map((pos, id, row) =>
                 gTranslate(renderStr("⚡"), pos.x - 0.5 * row[0].x, pos.y - 0.5 * row[0].y)
               ))}</>
               , G.cells)}
-            {/* effecting info UI */}
+            {/* battle info indication */}
             {G.cells.map((_, id) => <>{renderBattleEffect(id, id === pickedID)}</>)
             }
             {/* control */}
@@ -163,7 +171,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         </div>
 
         {/* info UI */}
-        <div style={{ width: "30%", float: "left" }}>
+        <div style={{ width: "20%", float: "left" }}>
 
 
           {battleFactorTable(pickedID)}
@@ -171,18 +179,53 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           <button disabled={!isActive} onClick={props.undo} >undo</button>
             <button disabled={!isActive} onClick={() => { events.endTurn && events.endTurn(); }} >End Turn</button>
             </p>
-          <p>Cell-Coord: {pickedID !== null && ((pos) => { return "(" + pos.x + "," + pos.y + ")"; })(Game.CId2Pos(pickedID))}{pickedID} 
+          <p>Cell-Coord: {pickedID !== null && ((pos) => { return "(" + pos.x + "," + pos.y + ")"; })(Game.CId2Pos(pickedID))}, Cell-Id: {pickedID} 
           </p>
+          {/* chosen piece info */}
           <p>
             Piece:{pickedID !== null && ((id) => {
               const obj = G.cells[id];
               if (obj) {
-                return spanBGColor(
-                //
-                <>{obj.objRender + obj.typeName}, offense: {obj.offense}, defense: {obj.defense}, range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))
+                return <> {spanBGColor(
+                
+                <>{obj.objRender + obj.typeName}, offense: {obj.offense}, defense: {obj.defense}, range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
+                <button disabled={!(isActive&&Game.canAttack(G,ctx,pickedID)[0])} onClick={()=>moves.attack(pickedID)} >Attack!</button>
+                </>
               }
             })(pickedID)} 
-            {Game.CId2Pos(5)===Game.CId2Pos(2)}</p>
+            </p>
+            {/* action info */}
+            <svg viewBox='-0.1 -0.1 6.2 1.2'>
+              {renderLayer((_,id)=>{
+              const moveEdRec=G.moveRecords[myID].map((p)=>p[1]);
+              const atk=G.attackRecords[myID];
+              if(id<5){
+                const edCId=moveEdRec[id];
+                const edObj=G.cells[edCId];
+                return <><rect
+                width="1"
+                height="1"
+                fill={pico8Palette.light_peach}
+                stroke={pico8Palette.dark_grey}
+                stroke-width="0.05" />
+                {edObj&&renderPiece(edObj)}
+                </>
+              }
+              else{ return <><rect
+                width="1"
+                height="1"
+                fill={pico8Palette.red}
+                stroke={pico8Palette.dark_grey}
+                stroke-width="0.05" />
+                {atk&&renderPiece(atk[1])}</>
+              }
+
+              
+            }
+              ,Array(6).fill(null))}
+              </svg>
+              {/* retreat info */}
+            <p>{G.forcedRetreat[currentPlayer][0]!==null&&"🏃‍♂️💥 I must retreat my unit first." }</p>
         </div>
       </div>
     </main>
@@ -201,7 +244,7 @@ function renderPiece(obj: Game.ObjInstance) {
       stroke-width="0.05" fill={fictionColor(obj.belong)} />}
     {renderStr(obj.objRender)}
     {!obj.supplied && renderStr("😅", 0.4)}
-    {obj.retreated && renderStr("🏃‍♂️", 0.4)}
+    {obj.retreating && renderStr("🏃‍♂️", 0.4)}
   </>
   )
 }
@@ -213,6 +256,14 @@ function gTranslate(jsx: JSX.Element | JSX.Element[], x = 0, y = 0) {
   return <g transform={`translate(${x} ${y})`}>
     {jsx}
   </g>
+}
+
+function drawLine(stCId:number, edCId:number , color:string="black", width:number=0.1, dash:number[]=[]) {
+  
+  const stPos = Game.CId2Pos(stCId);
+  const edPos = Game.CId2Pos(edCId);
+  return  <line x1={stPos.x+0.5} y1={stPos.y+0.5} x2={edPos.x+0.5} y2={edPos.y+0.5} stroke={color} strokeWidth={width} stroke-dasharray={dash} />
+  
 }
 
 function spanBGColor(jsx: JSX.Element | JSX.Element[], color: string) {
