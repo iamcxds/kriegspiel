@@ -16,11 +16,16 @@ There is another digital implementation: [Kriegspiel](http://r-s-g.org/kriegspie
 
 ## Route map
 
-- [ ] update function
-- [ ] supply line
+Current developing screenshot:
+![screenshot](resource/battleVeiw.png)
+![screenshot](resource/supply.png)
+
+- [x] update function
+- [x] supply line
 - [ ] moves records
 - [ ] attack mechanics
 - [ ] move anim
 - [x] get the charged cavalries
 - [x] battle value
 - [ ] Editor?
+  
