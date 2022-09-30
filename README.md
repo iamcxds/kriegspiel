@@ -13,3 +13,14 @@ Here are some materials about the game and its history.
 ## The Other Implementation
 
 There is another digital implementation: [Kriegspiel](http://r-s-g.org/kriegspiel/index.php), made by Alex Galloway. There are an [interview](https://www.youtube.com/watch?v=CGjt8po_y4I) and a [playthrough](https://www.youtube.com/watch?v=4l2M6vpWLAw) by Fred Serval. Unfortunately, it's only available on Mac and IOS, which inspires me to make a WEB version.
+
+## Route map
+
+- [ ] update function
+- [ ] supply line
+- [ ] moves records
+- [ ] attack mechanics
+- [ ] move anim
+- [x] get the charged cavalries
+- [x] battle value
+- [ ] Editor?
