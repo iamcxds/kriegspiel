@@ -46,6 +46,7 @@ There is another digital implementation: [Kriegspiel](http://r-s-g.org/kriegspie
 ## Route map
 
 Current developing screenshot:
+![play](resource/play1.png)
 ![editor](resource/editor.png)
 ![screenshot](resource/battleVeiw.png)
 ![screenshot](resource/supply.png)
