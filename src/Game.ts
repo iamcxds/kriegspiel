@@ -106,12 +106,12 @@ export const TicTacToe: Game<GameState> = {
     load: (G, ctx, fen: string) => {
       return loadGame(fen, ctx);
     },
-    editCells:(G, ctx, CId: CellID, element:ObjInstance|null) =>{
-      G.cells[CId]=element;
+    editCells: (G, ctx, CId: CellID, element: ObjInstance | null) => {
+      G.cells[CId] = element;
       update(G, ctx);
     },
-    editPlaces:(G, ctx, CId: CellID, element:Stronghold|null) =>{
-      G.places[CId]=element;
+    editPlaces: (G, ctx, CId: CellID, element: Stronghold | null) => {
+      G.places[CId] = element;
       update(G, ctx);
     },
   },
@@ -212,8 +212,6 @@ function loadGame(fen: string, ctx: Ctx): GameState {
 function decodeObj(s: string): ObjInstance | null {
 
   const [t, b] = s.split('.')
-  console.log(t)
-  console.log(b)
   if (t && b) {
     const be = b as P_ID;
     switch (t) {
@@ -246,11 +244,11 @@ function decodeStrong(s: string): Stronghold | null {
   else return null;
 }
 
-const game1="32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|14|🚩.0|4|🎪.0|1|⛰️|24|⛰️|19|🚚.0|4|💂.0/🛣️.0|17|🏇.0|🏇.0|1|💂.0|💂.0|🎉.0|💂.0|⛰️|17|🏇.0|🏇.0|💂.0|🚀.0|💂.0|💂.0|💂.0|⛰️|10|🏰|9|💂.0|3|⛰️|2|🏰|51|💂.1|💂.1|💂.1|🎉.1|🏇.1|20|💂.1|💂.1|💂.1|🏇.1|🏇.1|8|🏰|11|💂.1|💂.1|💂.1|🏇.1|17|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|🚚.1|23|🚀.1/🛣️.1|6|🚩.1/🏰.1|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1"
+const game1 = "32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|14|🚩.0|4|🎪.0|1|⛰️|24|⛰️|19|🚚.0|4|💂.0/🛣️.0|17|🏇.0|🏇.0|1|💂.0|💂.0|🎉.0|💂.0|⛰️|17|🏇.0|🏇.0|💂.0|🚀.0|💂.0|💂.0|💂.0|⛰️|10|🏰|9|💂.0|3|⛰️|2|🏰|51|💂.1|💂.1|💂.1|🎉.1|🏇.1|20|💂.1|💂.1|💂.1|🏇.1|🏇.1|8|🏰|11|💂.1|💂.1|💂.1|🏇.1|17|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|🚚.1|23|🚀.1/🛣️.1|6|🚩.1/🏰.1|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1"
 //update game 
 function update(G: GameState, ctx: Ctx) {
   //check supply
-  console.log("update")
+  //console.log("update")
   let cPlayer = ctx.currentPlayer as P_ID
   updateSuppliedCells(G, cPlayer);
   updateSuppliedCells(G, dualPlayerID(cPlayer));
@@ -284,14 +282,14 @@ function update(G: GameState, ctx: Ctx) {
 function updateSuppliedCells(G: GameState, player?: P_ID) {
 
   if (player !== "1") {
-    console.log("SCupdate 0")
+    //console.log("SCupdate 0")
     const SuppliedCells0 = getSuppliedCells(G, "0");
     G.inSupply[0] = SuppliedCells0
     // G.inSupply[0].map((_, id) => SuppliedCells0.includes(id));
   }
 
   if (player !== "0") {
-    console.log("SCupdate 1")
+    //console.log("SCupdate 1")
     const SuppliedCells1 = getSuppliedCells(G, "1");
 
     G.inSupply[1] = SuppliedCells1
@@ -300,7 +298,7 @@ function updateSuppliedCells(G: GameState, player?: P_ID) {
   updateSuppliedObj(G);
 }
 function updateSuppliedObj(G: GameState) {
-  console.log("SOupdate")
+  //console.log("SOupdate")
   G.cells = G.cells.map((obj, id) => {
     if (obj) { return { ...obj, supplied: G.inSupply[obj.belong].includes(id) } }
     else { return null }
@@ -346,9 +344,30 @@ function DirectDistance(p1: Position, p2: Position): null | number {
   if (dx === dy || dx === 0 || dy === 0) { return Math.max(dx, dy) }
   else { return null }
 }
+
 function ptSetDisLessThan(set: CellID[], pt: CellID, dis: number = 1): boolean {
-  return set.some((CId) => NaiveDistance(CId2Pos(pt), CId2Pos(CId)) <= dis)
+  if (set && set.length > 0) {
+    return set.some((CId) => NaiveDistance(CId2Pos(pt), CId2Pos(CId)) <= dis)
+  }
+  else return false;
 }
+
+/* function largerSet(set: CellID[], dis: number = 1): CellID[] {
+  return removeDup(set.flatMap((CId)=>{
+    const pos = CId2Pos(CId);
+    let result=[]
+    for (let i = -dis; i <= dis; i++) {
+      for (let j = -dis; j <= dis; i++){
+        const nx=pos.x+i;
+        const ny=pos.y+j;
+        const nId=Pos2CId(nx,ny);
+        if(nId>-1)
+        {result.push(nId)}
+      }
+    }
+    return result
+    }))
+} */
 
 function connectedComponents(set: CellID[], pts: CellID[]): CellID[] {
   //use CId
@@ -357,7 +376,7 @@ function connectedComponents(set: CellID[], pts: CellID[]): CellID[] {
 
   do {
     //new pts are not in old, and distance is less than 1
-    newSet = set.filter((CId) => (!oldSet.includes(CId)) && ptSetDisLessThan(oldSet, CId));
+    newSet = set.filter((CId) => (!oldSet.includes(CId)) && /* largerSet(oldSet).includes(CId) */ ptSetDisLessThan(oldSet, CId));
     oldSet = oldSet.concat(newSet)
   } while (newSet.length > 0)
   return oldSet;
@@ -397,6 +416,9 @@ function moveRange(G: GameState, stCId: CellID, speed: number = 1): CellID[] {
   let result = [stCId]
   for (let i = 0; i < speed; i++) {
     //for each steps target cell is empty and is not mountain,
+    // first filter out further cells
+    // let result be 1 block larger
+    //result = largerSet(result).filter((CId)=>G.cells[CId] === null && G.places[CId]?.placeType !== "Mountain")
     result = G.cells.map((obj, id) => NaiveDistance(CId2Pos(stCId), CId2Pos(id)) <= speed && obj === null && G.places[id]?.placeType !== "Mountain" && ptSetDisLessThan(result, id) ? id : null).filter(nonNull) as CellID[]
 
   }
@@ -426,7 +448,7 @@ function searchInMiShape(G: GameState, CId: CellID, filter: (obj: ObjInstance | 
   const rowsLst: Position[][] = [];
   //search for 8 direction
   for (let i = -1; i <= 1; i++) {
-    for (let j = -1; j <= 1; j++)
+    for (let j = -1; j <= 1; j++) {
       if (i !== 0 || j !== 0) {
         let relPosLine: Position[] = [];
         let aCIdLine: CellID[] = [];
@@ -451,6 +473,7 @@ function searchInMiShape(G: GameState, CId: CellID, filter: (obj: ObjInstance | 
           aCIdRowsLst.push(aCIdLine)
         }
       }
+    }
   }
   return [aCIdRowsLst, rowsLst];
 }
@@ -554,16 +577,16 @@ export function getDirSuppliedLines(G: GameState, player: P_ID): [CellID[], Cell
   // get direct supply lines
   let dirSuppliedLines = arsenalLst.map((aId) => dirSupplyFrom(G, aId, player));
   let dirSupplied = dirSuppliedLines.flat(2);
-  let dirRelayLst=[]
+  let dirRelayLst = []
   //if relay is on direct, then add more supply lines, iterate as many times as relay units on has
   for (let i = 0; i < 2; i++) {
-  dirRelayLst = relayLst.filter((rId) => dirSupplied.includes(rId));
-  dirSuppliedLines = dirSuppliedLines.concat(relayLst.map((rId) => dirSupplyFrom(G, rId, player)));
-  dirSupplied = dirSuppliedLines.flat(2);
-    
+    dirRelayLst = relayLst.filter((rId) => dirSupplied.includes(rId));
+    dirSuppliedLines = dirSuppliedLines.concat(dirRelayLst.map((rId) => dirSupplyFrom(G, rId, player)));
+    dirSupplied = dirSuppliedLines.flat(2);
+
   }
-  
-  return [dirSupplied, removeDup( dirSuppliedLines)]
+
+  return [dirSupplied, removeDup(dirSuppliedLines)]
 }
 
 export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
@@ -583,7 +606,7 @@ export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
 type Entity = number
 type ObjType = "Infantry" | "Cavalry" | "Artillery" | "Swift_Artillery" | "Relay" | "Swift_Relay"
 
-export const objTypeList:readonly ObjType[]=["Infantry" , "Cavalry" , "Artillery" , "Swift_Artillery" , "Relay" , "Swift_Relay"] 
+export const objTypeList: readonly ObjType[] = ["Infantry", "Cavalry", "Artillery", "Swift_Artillery", "Relay", "Swift_Relay"]
 interface ObjData {
   readonly typeName: ObjType,
   readonly objType: ObjType, // functional type
@@ -687,7 +710,7 @@ export function newPiece(type: ObjType, be: P_ID): ObjInstance {
 
 
 type StrongholdType = "Arsenal" | "Pass" | "Fortress" | "Mountain"
-export const strongholdTypeList :readonly StrongholdType[]=["Arsenal" , "Fortress" , "Pass" ,  "Mountain"]
+export const strongholdTypeList: readonly StrongholdType[] = ["Arsenal", "Fortress", "Pass", "Mountain"]
 interface Stronghold {
   readonly placeType: StrongholdType,
   readonly defenseAdd: number
@@ -696,7 +719,7 @@ interface Stronghold {
 }
 
 export function newStronghold(type: StrongholdType, belong: P_ID | null = null): Stronghold {
-  
+
   return { placeType: type, defenseAdd: renderPlaceByType(type)[1], placeRender: renderPlaceByType(type)[0], belong: belong }
 }
 export function renderPlaceByType(t: StrongholdType): [string, number] {

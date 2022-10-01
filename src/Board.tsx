@@ -3,7 +3,7 @@ import { BoardProps } from 'boardgame.io/react';
 import * as Game from './Game';
 import { objTypeList, strongholdTypeList, BoardSize, CellID, P_ID, GameState, ObjInstance, canPick, canAttack, canPut, CId2Pos, Pos2CId, dualPlayerID, getBattleFactor, getChargedCavalries, getDirSuppliedLines, getSuppliedCells, exportGame } from './Game';
 import { Ctx } from 'boardgame.io';
-import './Board.css'
+//import './Board.css'
 import { Console } from 'console';
 
 const getWinner = (ctx: Ctx): string | null => {
@@ -20,8 +20,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const opponentID = dualPlayerID(myID)
   const currentPlayer = ctx.currentPlayer as P_ID;
   const [pickedID, pickUpID] = useState<CellID | null>(null)
-  // the supplied cells when remove picked up pieces
-  //const [movedSupply, getMovedSupply ] = useState<CellID[]>([])
+
   const [gameData, setGameData] = useState<string>('');
   const [editMode, setEditMode] = useState<boolean>(false);
   const [editState, setEditState] = useState<(CellID | null)>(null)
@@ -97,22 +96,32 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   //render info UI  
   function battleFactorTable(id: CellID | null) {
-    const MyOff = id === null ? 0 : getBattleFactor(G, myID, true, id)[0]
-    const MyDef = id === null ? 0 : getBattleFactor(G, myID, false, id)[0]
-    const EnemyDef = id === null ? 0 : getBattleFactor(G, opponentID, false, id)[0]
-    const EnemyOff = id === null ? 0 : getBattleFactor(G, opponentID, true, id)[0]
+    const nonNull = id !== null
+    const MyOff = nonNull ? getBattleFactor(G, myID, true, id)[0] : 0
+    const MyDef = nonNull ? getBattleFactor(G, myID, false, id)[0] : 0
+    const EnemyDef = nonNull ? getBattleFactor(G, opponentID, false, id)[0] : 0
+    const EnemyOff = nonNull ? getBattleFactor(G, opponentID, true, id)[0] : 0
     const RelOff = MyOff - EnemyDef
     const RelDef = MyDef - EnemyOff
+    const obj = nonNull ? G.cells[id] : null;
+    const myOffTr =
+      <tr>
+        <td style={{ backgroundColor: fictionColor(myID) }}>
+          MyOff: {MyOff} {offState(RelOff)}</td>
+        <td style={{ backgroundColor: fictionColor(opponentID) }}>
+          EnemyDef: {EnemyDef} {defState(-RelOff)}</td>
+      </tr>
+    const myDefTr =
+      <tr>
+        <td style={{ backgroundColor: fictionColor(myID) }}>
+          MyDef: {MyDef} {defState(RelDef)} </td>
+        <td style={{ backgroundColor: fictionColor(opponentID) }}>
+          EnemyOff: {EnemyOff} {offState(-RelDef)}</td>
+      </tr>
 
     return (<table>
-      <tr style={{ backgroundColor: fictionColor(myID) }}>
-        <td>MyOff: {MyOff} {offState(RelOff)}</td>
-        <td>MyDef: {MyDef} {defState(RelDef)} </td>
-      </tr>
-      <tr style={{ backgroundColor: fictionColor(opponentID) }}>
-        <td>EnemyDef: {EnemyDef} {defState(-RelOff)}</td>
-        <td>EnemyOff: {EnemyOff} {offState(-RelDef)}</td>
-      </tr>
+      {obj?.belong === opponentID ? <>{myOffTr}</> : <>{myDefTr}</>}
+
     </table>)
   }
   function offState(n: number) {
@@ -146,13 +155,13 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   }
 
   const gameBoard = (
-    <svg viewBox={`-0.8 -0.8 ${BoardSize.mx + 1.6} ${BoardSize.my + 1.6}`}>
+    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}>
 
       {/* background */}
-      {Array(BoardSize.mx).fill(null).map((_,id)=>gTranslate(renderStr((id+1).toString()),id,-0.8))}
-      {Array(BoardSize.my).fill(null).map((_,id)=>gTranslate(renderStr(String.fromCharCode(65 + id)),-0.8,id))}
-      {Array(BoardSize.mx).fill(null).map((_,id)=>gTranslate(renderStr((id+1).toString()),id,BoardSize.my-1+0.8))}
-      {Array(BoardSize.my).fill(null).map((_,id)=>gTranslate(renderStr(String.fromCharCode(65 + id)),BoardSize.mx-1+0.8,id))}
+      {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, -0.8))}
+      {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), -0.8, id))}
+      {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, BoardSize.my - 1 + 0.8))}
+      {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), BoardSize.mx - 1 + 0.8, id))}
       {renderLayer((_, id) => <rect
         key={id}
         width="1"
@@ -161,7 +170,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         stroke={pico8Palette.dark_grey}
         stroke-width="0.05" />
       )}
-      <line x1="0" y1={BoardSize.my/2} x2={BoardSize.mx} y2={BoardSize.my/2} stroke={pico8Palette.lavender} stroke-width="0.2" />
+      <line x1="0" y1={BoardSize.my / 2} x2={BoardSize.mx} y2={BoardSize.my / 2} stroke={pico8Palette.lavender} stroke-width="0.2" />
       {/* supply line */}
       {getDirSuppliedLines(G, '0')[1].map((lines) => lines.map((lineLst) => {
 
@@ -214,13 +223,17 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       </p>
       {/* chosen piece info */}
       <p>
-        Chosen Piece:{pickedID !== null && ((id) => {
+        Chosen Point:{pickedID !== null && ((id) => {
           const obj = G.cells[id];
-          if (obj) {
-            return <> {spanBGColor(<>{obj.objRender + obj.typeName}, offense: {obj.offense}, defense: {obj.defense}, range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
-              <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >Attack!</button>
-            </>
-          }
+          const str = G.places[id];
+
+          return (<>
+            {obj && <p>
+              {spanBGColor(<>{obj.objRender + obj.typeName}, offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense}, range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
+              <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
+            </p>}
+            {str && <p>{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </p>}
+          </>);
         })(pickedID)}
       </p>
       {/* action info */}
@@ -284,6 +297,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             return <g onClick={() => { editorClick(id); }}><rect
               width="0.9"
               height="0.9"
+              x="0.05" y="0.05"
               fill={fictionColor(editFiction)}
               stroke={id === editState ? pico8Palette.red : pico8Palette.dark_grey}
               stroke-width={id === editState ? 0.15 : 0.05} />
@@ -295,6 +309,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             return <g onClick={() => { editorClick(id); }}><rect
               width="0.9"
               height="0.9"
+              x="0.05" y="0.05"
               fill={fictionColor(editFiction)}
               stroke={id === editState ? pico8Palette.red : pico8Palette.dark_grey}
               stroke-width={id === editState ? 0.15 : 0.05} />
@@ -308,17 +323,28 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       </div>
       {/* Game Data */}
       <form>
-        <label>GameData:
-          <textarea
-            name="gameData"
-            //cols={20} 
-            rows={30}
-            style={{ width: "90%"}}
-            value={gameData}
-            onChange={(e) => setGameData(e.target.value)}></textarea>
-        </label>
+        <label>GameData:</label>
+        <textarea
+          name="gameData"
+          id="gameData"
+          //cols={20} 
+          rows={10}
+          style={{ width: "90%", height: "60%", resize: "vertical" }}
+          value={gameData}
+          onChange={(e) => setGameData(e.target.value)}></textarea>
+
         <input type="button" value="Export Game" onClick={() => setGameData(exportGame(G))} />
         <input type="button" value="Load Game" onClick={() => moves.load(gameData)} />
+        <input type="button" value="Copy Data" onClick={() => {
+          // Get the text field
+          const copyText = document.getElementById("gameData") as HTMLInputElement;
+          // Select the text field     
+          copyText.select();
+          copyText.setSelectionRange(0, 99999); // For mobile devices       
+          // Copy the text inside the text field
+          navigator.clipboard.writeText(gameData);
+        }} />
+        <input type="button" value="Remove Data" onClick={() => setGameData('')} />
       </form>
     </div>
   )
@@ -326,16 +352,16 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   return (
     <main>
       <h1>Kriegspiel</h1>
-      <div style={{ width: "99%", border: "3px solid #73AD21", content: "", clear: "both", display: "table" }}>
+      <div style={{ width: "100%", content: "", clear: "both", display: "flex" }}>
 
-        <div style={{ width: "80%", float: "left" }}>
+        <div style={{ width: "80%", float: "left", border: `2px solid ${pico8Palette.dark_green}` }}>
           {/* svg Game Board */}
           {gameBoard}
 
         </div>
 
         {/* info UI */}
-        <div style={{ width: "20%", float: "left" }}>
+        <div style={{ width: "20%", float: "left", border: `2px solid ${pico8Palette.dark_green}`, }}>
           <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} />
           {editMode ? sideBarEdit : sideBarPlay}
 
