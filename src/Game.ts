@@ -5,7 +5,7 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 
 export type P_ID = '0' | '1'
 
-type CellID=number
+export type CellID = number
 
 export interface GameState {
   //myID:P_ID,
@@ -25,31 +25,7 @@ export function dualPlayerID(id: P_ID) {
 }
 export const TicTacToe: Game<GameState> = {
   setup: (ctx) => {
-    let eCells = Array(BoardSize.mx * BoardSize.my).fill(null);
-    eCells[0] = newPiece("Infantry", '0');
-    eCells[Pos2CId(0, 1)] = newPiece("Artillery", '0');
-    eCells[Pos2CId(0, 4)] = newPiece("Relay", '0');
-    eCells[1] = newPiece("Cavalry", '1');
-    eCells[2] = newPiece("Cavalry", '1');
-    eCells[3] = newPiece("Cavalry", '1');
-    eCells[4] = newPiece("Cavalry", '1');
-    let ePlaces = Array(BoardSize.mx * BoardSize.my).fill(null);
-    ePlaces[0] = newStronghold("Arsenal", '0');
-    ePlaces[9] = newStronghold("Arsenal", '1');
-    ePlaces[Pos2CId(4, 3)] = newStronghold("Fortress");
-    ePlaces[Pos2CId(3, 3)] = newStronghold("Mountain");
-    let initGame: GameState = {
-      cells: eCells, places: ePlaces,
-      inSupply: {
-        '0': Array(BoardSize.mx * BoardSize.my).fill(false),
-        '1': Array(BoardSize.mx * BoardSize.my).fill(false)
-      },
-      moveRecords: { 0: [], 1: [] },
-      attackRecords: { 0: null, 1: null },
-      forcedRetreat: { 0: [null, null], 1: [null, null] }
-    }
-    update(initGame, ctx);
-    return initGame;
+    return loadGame(game1, ctx);
   },
   /* playerView: (G, ctx, playerID) => {
     return {...G, myID: playerID, opponentID:dualPlayerID(playerID as P_ID)};
@@ -83,7 +59,7 @@ export const TicTacToe: Game<GameState> = {
   },
 
   moves: {
-    movePiece: (G, ctx, stCId: number, edCId: number) => {
+    movePiece: (G, ctx, stCId: CellID, edCId: CellID) => {
       const obj = G.cells[stCId]
       const cPlayer = ctx.currentPlayer as P_ID
 
@@ -110,7 +86,7 @@ export const TicTacToe: Game<GameState> = {
       else
         return INVALID_MOVE;
     },
-    attack: (G, ctx, CId: number) => {
+    attack: (G, ctx, CId: CellID) => {
       const cPlayer = ctx.currentPlayer as P_ID
       const obj = G.cells[CId]
       const [canAtk, relOff] = canAttack(G, ctx, CId)
@@ -126,20 +102,151 @@ export const TicTacToe: Game<GameState> = {
         update(G, ctx);
       }
       else return INVALID_MOVE;
+    },
+    load: (G, ctx, fen: string) => {
+      return loadGame(fen, ctx);
+    },
+    editCells:(G, ctx, CId: CellID, element:ObjInstance|null) =>{
+      G.cells[CId]=element;
+      update(G, ctx);
+    },
+    editPlaces:(G, ctx, CId: CellID, element:Stronghold|null) =>{
+      G.places[CId]=element;
+      update(G, ctx);
+    },
+  },
+
+  endIf: (G, ctx) => {
+
+    if (!G.cells.some((obj, id) => canPick(G, ctx, id) || canAttack(G, ctx, id))) {
+      const cPlayer = ctx.currentPlayer as P_ID
+      return { winner: dualPlayerID(cPlayer), loser: cPlayer };
     }
   },
 
-  /* endIf: (G, ctx) => {
-    if (IsVictory(G.cells)) {
-      return { winner: ctx.currentPlayer };
-    }
-    if (IsDraw(G.cells)) {
-      return { draw: true };
-    }
-  }, */
-
 };
 
+//data save and load board use FEN 
+//date like "💂‍♂️.0/🎪.0|8|"
+
+function board2FEN<T>(board: (T | null)[], encode: (t: T, id: CellID) => string): string {
+  let result: string[] = []
+  let emptyCells = 0
+  board.forEach((obj, id) => {
+    if (obj === null) {
+      emptyCells = emptyCells + 1;
+    }
+    else {
+      if (emptyCells > 0) {
+        result.push(emptyCells.toString());
+        emptyCells = 0;
+      }
+      result.push(encode(obj, id));
+    }
+  });
+  return result.join('|')
+}
+function FEN2board<T>(fen: string, decode: (str: string) => (T | null)): (T | null)[] {
+  let data: string[] = fen.split('|');
+  let result = Array(BoardSize.mx * BoardSize.my).fill(null);
+  let pointer = 0
+  data.forEach(str => {
+    if (isNaN(Number(str))) {
+      result[pointer] = decode(str);
+      pointer = pointer + 1;
+
+    }
+    else { pointer = pointer + Number(str); }
+
+  });
+  return result
+}
+
+export function exportGame(G: GameState): string {
+  const mixedBoard = G.cells.map((obj, id) => {
+    const strong = G.places[id];
+    return (obj ? (strong ? [obj, strong] as [ObjInstance, Stronghold] : obj) : (strong ? strong : null))
+  })
+  return board2FEN(mixedBoard, (element) => {
+    if (Array.isArray(element)) {
+      const [obj, str] = element;
+      return obj.objRender + '.' + obj.belong + '/' + str.placeRender + (str.belong ? ('.' + str.belong) : '')
+    }
+    else if ((element as ObjInstance).objRender) {
+      const obj = element as ObjInstance
+      return obj.objRender + '.' + obj.belong
+    }
+    else {
+      const str = element as Stronghold;
+      return str.placeRender + (str.belong ? ('.' + str.belong) : '')
+    }
+  })
+}
+
+function loadGame(fen: string, ctx: Ctx): GameState {
+  const deCells = FEN2board(fen, (str) => {
+    const data = str.split('/')[0]
+
+    return data ? decodeObj(data) : null
+  })
+  const dePlaces = FEN2board(fen, (str) => {
+    //💂‍♂️.0/🎪.0
+    const dLst = str.split('/')
+    const data = dLst[dLst.length - 1]
+    return data ? decodeStrong(data) : null
+  })
+  let myGame: GameState = {
+    cells: deCells, places: dePlaces,
+    inSupply: {
+      '0': Array(BoardSize.mx * BoardSize.my).fill(false),
+      '1': Array(BoardSize.mx * BoardSize.my).fill(false)
+    },
+    moveRecords: { 0: [], 1: [] },
+    attackRecords: { 0: null, 1: null },
+    forcedRetreat: { 0: [null, null], 1: [null, null] }
+  }
+  update(myGame, ctx);
+  return myGame;
+}
+//💂‍♂️.0->newPiece
+function decodeObj(s: string): ObjInstance | null {
+
+  const [t, b] = s.split('.')
+  console.log(t)
+  console.log(b)
+  if (t && b) {
+    const be = b as P_ID;
+    switch (t) {
+      case '💂': return newPiece("Infantry", be);
+      case '🏇': return newPiece("Cavalry", be);
+      case '🎉': return newPiece("Artillery", be);
+      case '🚀': return newPiece("Swift_Artillery", be);
+      case '🚩': return newPiece("Relay", be);
+      case '🚚': return newPiece("Swift_Relay", be);
+
+
+      default: return null;
+    }
+  }
+  else return null;
+}
+
+function decodeStrong(s: string): Stronghold | null {
+  const [t, b] = s.split('.')
+  if (t) {
+    const be = b ? (b as P_ID) : null;
+    switch (t) {
+      case '🎪': return newStronghold("Arsenal", be);
+      case '🏰': return newStronghold("Fortress", be);
+      case '🛣️': return newStronghold("Pass", be);
+      case '⛰️': return newStronghold("Mountain", be);
+      default: return null;
+    }
+  }
+  else return null;
+}
+
+const game1="32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|14|🚩.0|4|🎪.0|1|⛰️|24|⛰️|19|🚚.0|4|💂.0/🛣️.0|17|🏇.0|🏇.0|1|💂.0|💂.0|🎉.0|💂.0|⛰️|17|🏇.0|🏇.0|💂.0|🚀.0|💂.0|💂.0|💂.0|⛰️|10|🏰|9|💂.0|3|⛰️|2|🏰|51|💂.1|💂.1|💂.1|🎉.1|🏇.1|20|💂.1|💂.1|💂.1|🏇.1|🏇.1|8|🏰|11|💂.1|💂.1|💂.1|🏇.1|17|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|🚚.1|23|🚀.1/🛣️.1|6|🚩.1/🏰.1|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1"
 //update game 
 function update(G: GameState, ctx: Ctx) {
   //check supply
@@ -210,7 +317,11 @@ interface Position {
   y: number
 }
 
-export const BoardSize = { mx: 25, my: 20 }
+interface Size {
+  readonly mx: number,
+  readonly my: number
+}
+export const BoardSize: Size = { mx: 25, my: 20 }
 
 export function Pos2CId(x: number, y: number): CellID {
   if (x < 0 || y < 0 || x >= BoardSize.mx || y >= BoardSize.my) { return -1 }
@@ -239,7 +350,7 @@ function ptSetDisLessThan(set: CellID[], pt: CellID, dis: number = 1): boolean {
   return set.some((CId) => NaiveDistance(CId2Pos(pt), CId2Pos(CId)) <= dis)
 }
 
-function connectedComponents(set: CellID[], pts: CellID[]): number[] {
+function connectedComponents(set: CellID[], pts: CellID[]): CellID[] {
   //use CId
   let oldSet = pts
   let newSet: CellID[] = []
@@ -257,11 +368,11 @@ export function nonNull<T>(a: T) { return a !== null }
 
 export function removeDup<T>(a: Array<T>) { return Array.from(new Set(a)) }
 
-export function filterCId<T>(a: (T | null)[], filter: (b: T, c: number) => boolean): number[] {
-  return a.map((obj, id) => (obj && filter(obj, id)) ? id : null).filter(nonNull) as number[];
+export function filterCId<T>(a: (T | null)[], filter: (b: T, c: CellID) => boolean): CellID[] {
+  return a.map((obj, id) => (obj && filter(obj, id)) ? id : null).filter(nonNull) as CellID[];
 }
 
-export function canPick(G: GameState, ctx: Ctx, CId: number) {
+export function canPick(G: GameState, ctx: Ctx, CId: CellID) {
   const cPlayer = ctx.currentPlayer as P_ID
   const moveEdRec = G.moveRecords[cPlayer].map((p) => p[1])
   const retreatSt = G.forcedRetreat[cPlayer][0]
@@ -277,22 +388,22 @@ export function canPick(G: GameState, ctx: Ctx, CId: number) {
     return obj !== null && obj.belong === cPlayer && (obj.supplied || obj.objType === "Relay");
   }
 }
-export function canPut(G: GameState, ctx: Ctx, stCId: number, edCId: number) {
+export function canPut(G: GameState, ctx: Ctx, stCId: CellID, edCId: CellID) {
   const obj = G.cells[stCId]
   //check obj is on stCells,  in move range
   return obj !== null && moveRange(G, stCId, obj.speed).includes(edCId);
 }
-function moveRange(G: GameState, stCId: number, speed: number = 1): number[] {
+function moveRange(G: GameState, stCId: CellID, speed: number = 1): CellID[] {
   let result = [stCId]
   for (let i = 0; i < speed; i++) {
     //for each steps target cell is empty and is not mountain,
-    result = G.cells.map((obj, id) => NaiveDistance(CId2Pos(stCId), CId2Pos(id)) <= speed && obj === null && G.places[id]?.placeType !== "Mountain" && ptSetDisLessThan(result, id) ? id : null).filter(nonNull) as number[]
+    result = G.cells.map((obj, id) => NaiveDistance(CId2Pos(stCId), CId2Pos(id)) <= speed && obj === null && G.places[id]?.placeType !== "Mountain" && ptSetDisLessThan(result, id) ? id : null).filter(nonNull) as CellID[]
 
   }
   return result
 }
 
-export function canAttack(G: GameState, ctx: Ctx, CId: number): [boolean, number] {
+export function canAttack(G: GameState, ctx: Ctx, CId: CellID): [boolean, number] {
   const cPlayer = ctx.currentPlayer as P_ID
   const obj = G.cells[CId];
   const retreatSt = G.forcedRetreat[cPlayer][0]
@@ -309,16 +420,16 @@ export function canAttack(G: GameState, ctx: Ctx, CId: number): [boolean, number
   else { return [false, 0] }
 }
 //search in 米 shape
-function searchInMiShape(G: GameState, CId: number, filter: (obj: ObjInstance | null, id: number) => boolean, min: number = 0, max: number = Math.max(BoardSize.mx, BoardSize.my)): [number[][], Position[][]] {
+function searchInMiShape(G: GameState, CId: CellID, filter: (obj: ObjInstance | null, id: CellID) => boolean, min: number = 0, max: number = Math.max(BoardSize.mx, BoardSize.my)): [CellID[][], Position[][]] {
   const pos = CId2Pos(CId);
-  const aCIdRowsLst: number[][] = []
+  const aCIdRowsLst: CellID[][] = []
   const rowsLst: Position[][] = [];
   //search for 8 direction
   for (let i = -1; i <= 1; i++) {
     for (let j = -1; j <= 1; j++)
       if (i !== 0 || j !== 0) {
         let relPosLine: Position[] = [];
-        let aCIdLine: number[] = [];
+        let aCIdLine: CellID[] = [];
         //check on 1 direction, distance from min to max
         for (let n = min; n <= max; n++) {
           //get the cells on direction
@@ -346,7 +457,7 @@ function searchInMiShape(G: GameState, CId: number, filter: (obj: ObjInstance | 
 
 //battle value
 // get charged cavalry rows with relative positions.
-export function getChargedCavalries(G: GameState, CId: number): (Position[])[] {
+export function getChargedCavalries(G: GameState, CId: CellID): (Position[])[] {
 
   const obj = G.cells[CId]
   const belong = obj?.belong
@@ -365,7 +476,7 @@ export function getChargedCavalries(G: GameState, CId: number): (Position[])[] {
 
 }
 
-export function getBattleFactor(G: GameState, player: P_ID, isOffense: boolean, CId: number): [number, number[]]
+export function getBattleFactor(G: GameState, player: P_ID, isOffense: boolean, CId: CellID): [number, CellID[]]
 //type: true->offense, false->defense
 {
   const pos = CId2Pos(CId);
@@ -427,7 +538,7 @@ function isInRange(pos: Position, oPos: Position, obj: ObjInstance): boolean {
 
 //Supply 
 
-export function dirSupplyFrom(G: GameState, CId: number, player: P_ID) {
+export function dirSupplyFrom(G: GameState, CId: CellID, player: P_ID) {
   let result = searchInMiShape(G, CId, (obj, id) =>
     //filter the objs block the supply lines
     //obj is enemy, has offense factor, is supplied, not retreat
@@ -436,18 +547,23 @@ export function dirSupplyFrom(G: GameState, CId: number, player: P_ID) {
   return result[0]
 }
 
-export function getDirSuppliedLines(G: GameState, player: P_ID): [number[], number[][][]] {
+export function getDirSuppliedLines(G: GameState, player: P_ID): [CellID[], CellID[][][]] {
   //get arsenals CId and relays CId
   const arsenalLst = filterCId(G.places, (str) => (str.belong === player && str.placeType === "Arsenal"));
-  let relayLst = filterCId(G.cells, (obj) => obj.belong === player && obj.objType === "Relay");
+  const relayLst = filterCId(G.cells, (obj) => obj.belong === player && obj.objType === "Relay");
   // get direct supply lines
   let dirSuppliedLines = arsenalLst.map((aId) => dirSupplyFrom(G, aId, player));
   let dirSupplied = dirSuppliedLines.flat(2);
-  //if relay is on direct, then add more supply lines
-  relayLst = relayLst.filter((rId) => dirSupplied.includes(rId));
+  let dirRelayLst=[]
+  //if relay is on direct, then add more supply lines, iterate as many times as relay units on has
+  for (let i = 0; i < 2; i++) {
+  dirRelayLst = relayLst.filter((rId) => dirSupplied.includes(rId));
   dirSuppliedLines = dirSuppliedLines.concat(relayLst.map((rId) => dirSupplyFrom(G, rId, player)));
-  dirSupplied = removeDup(dirSuppliedLines.flat(2));
-  return [dirSupplied, dirSuppliedLines]
+  dirSupplied = dirSuppliedLines.flat(2);
+    
+  }
+  
+  return [dirSupplied, removeDup( dirSuppliedLines)]
 }
 
 export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
@@ -466,6 +582,8 @@ export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
 
 type Entity = number
 type ObjType = "Infantry" | "Cavalry" | "Artillery" | "Swift_Artillery" | "Relay" | "Swift_Relay"
+
+export const objTypeList:readonly ObjType[]=["Infantry" , "Cavalry" , "Artillery" , "Swift_Artillery" , "Relay" , "Swift_Relay"] 
 interface ObjData {
   readonly typeName: ObjType,
   readonly objType: ObjType, // functional type
@@ -492,7 +610,7 @@ export interface ObjInstance extends ObjData {
 type Type2ObjData = {
   [Key in ObjType]: ObjData
 }
-const dataList: Type2ObjData = {
+export const objDataList: Type2ObjData = {
   "Infantry": {
     typeName: "Infantry",
     objType: "Infantry",
@@ -556,8 +674,8 @@ const dataList: Type2ObjData = {
 
 }
 
-function newPiece(type: ObjType, be: P_ID): ObjInstance {
-  const objData = dataList[type]
+export function newPiece(type: ObjType, be: P_ID): ObjInstance {
+  const objData = objDataList[type]
   return {
     ...objData,
     //entity:ent,
@@ -569,6 +687,7 @@ function newPiece(type: ObjType, be: P_ID): ObjInstance {
 
 
 type StrongholdType = "Arsenal" | "Pass" | "Fortress" | "Mountain"
+export const strongholdTypeList :readonly StrongholdType[]=["Arsenal" , "Fortress" , "Pass" ,  "Mountain"]
 interface Stronghold {
   readonly placeType: StrongholdType,
   readonly defenseAdd: number
@@ -576,14 +695,15 @@ interface Stronghold {
   belong: P_ID | null
 }
 
-function newStronghold(type: StrongholdType, belong: P_ID | null = null): Stronghold {
-  function renderByType(t: StrongholdType): [string, number] {
-    switch (t) {//render and def Add
-      case "Arsenal": return ["🎪", 0];
-      case "Pass": return ["🛣️", 2];
-      case "Fortress": return ["🏰", 4];
-      case "Mountain": return ["⛰️", 0]
-    }
+export function newStronghold(type: StrongholdType, belong: P_ID | null = null): Stronghold {
+  
+  return { placeType: type, defenseAdd: renderPlaceByType(type)[1], placeRender: renderPlaceByType(type)[0], belong: belong }
+}
+export function renderPlaceByType(t: StrongholdType): [string, number] {
+  switch (t) {//render and def Add
+    case "Arsenal": return ["🎪", 0];
+    case "Pass": return ["🛣️", 2];
+    case "Fortress": return ["🏰", 4];
+    case "Mountain": return ["⛰️", 0]
   }
-  return { placeType: type, defenseAdd: renderByType(type)[1], placeRender: renderByType(type)[0], belong: belong }
 }

@@ -15,7 +15,7 @@ Here are some materials about the game and its history.
 Why emoji? there is nothing more appropriate than emoji to illustrate the Spectacle: we are habiting from symbols to symbols that are produced by L'Autre. The big tech companies decide the meanings and the representations of those symbols, whether [🔫](https://emojipedia.org/pistol/) is a handgun or a harmless toy.
 
 - Units
-  - 💂‍♂️ Infantry
+  - 💂 Infantry
   - 🏇 Cavalry
   - 🎉 Artillery
   - 🚀 Swift Artillery
@@ -46,6 +46,7 @@ There is another digital implementation: [Kriegspiel](http://r-s-g.org/kriegspie
 ## Route map
 
 Current developing screenshot:
+![editor](resource/editor.png)
 ![screenshot](resource/battleVeiw.png)
 ![screenshot](resource/supply.png)
 ![screenshot](resource/retreat1.png)
@@ -56,7 +57,7 @@ Current developing screenshot:
 - [x] moves records
 - [x] attack mechanics
 - [ ] move anim
-- [ ] Editor?
+- [x] Editor?
 
 ## The Ambiguities of Rules (my setting)
 
