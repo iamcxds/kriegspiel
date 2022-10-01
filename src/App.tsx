@@ -7,13 +7,13 @@ import { Board }  from './Board';
 const TicTacToeClient = Client({
   game: TicTacToe,
   board: Board,
-  multiplayer: Local(),
+//  multiplayer: Local(),
 });
 
 const App = () => (
   <div>
-    <TicTacToeClient playerID="0" />
-    <TicTacToeClient playerID="1" />
+    <TicTacToeClient /* playerID="0" */ />
+    {/* <TicTacToeClient playerID="1" /> */}
   </div>
 );
 

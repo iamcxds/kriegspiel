@@ -205,7 +205,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
                 return <> {spanBGColor(
                 
                 <>{obj.objRender + obj.typeName}, offense: {obj.offense}, defense: {obj.defense}, range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
-                <button disabled={!(isActive&&Game.canAttack(G,ctx,pickedID)[0])} onClick={()=>moves.attack(pickedID)} >Attack!</button>
+                <button disabled={!(isActive&&Game.canAttack(G,ctx,pickedID)[0])} onClick={()=>{pickUpID(null);moves.attack(pickedID);}} >Attack!</button>
                 </>
               }
             })(pickedID)} 
@@ -219,13 +219,15 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
               if(id<5){
                 const edCId=moveEdRec[id];
                 const edObj=G.cells[edCId];
+                //render moved pieces, if attacked, then can not move anymore
                 return <><rect
                 width="1"
                 height="1"
                 fill={pico8Palette.light_peach}
                 stroke={pico8Palette.dark_grey}
                 stroke-width="0.05" />
-                {edObj&&renderPiece(edObj)}
+                
+                {edObj?renderPiece(edObj):(atk?renderStr("❌"):null)}
                 </>
               }
               else{ 
