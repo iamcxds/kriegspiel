@@ -29,8 +29,9 @@ Current developing screenshot:
 - [ ] move anim
 - [ ] Editor?
 
-## The Ambiguity of Rule (my setting)
+## The Ambiguities of Rules (my setting)
 
 - Will enemy units block fire lines? i.e. can I attack back-line units? (no, yes)
 - Will offline enemy units block communication lines? will the retreating unit do? (no, yes)
+- Is failed retreat count as a move? (no)
   

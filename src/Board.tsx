@@ -15,10 +15,12 @@ interface GameProps extends BoardProps<Game.GameState> { }
 
 export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) => {
   let winner = getWinner(ctx);
-  const myID = props.playerID as Game.P_ID;
-  const opponentID = Game.dualPlayerID(props.playerID as Game.P_ID)
+  const myID= (props.playerID!==null?props.playerID : ctx.currentPlayer) as Game.P_ID;
+  const opponentID = Game.dualPlayerID(myID)
   const currentPlayer = ctx.currentPlayer as Game.P_ID;
   const [pickedID, pickUpID] = useState<number | null>(null)
+  // the supplied cells when remove picked up pieces
+  //const [movedSupply, getMovedSupply ] = useState<number[]>([])
 
   function pickedData(pId: number | null) {
     if (pId !== null && Game.canPick(G, ctx, pId) && isActive) { return G.cells[pId]; }
@@ -31,6 +33,11 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     switch (pickedID) {
       case null:
         pickUpID(id);
+        /* const obj=G.cells[id];
+        if(obj&&obj.belong===currentPlayer){
+          const newG:Game.GameState={...G, cells:G.cells.map((obj,CId)=>CId===id?null:obj)}
+          getMovedSupply(Game.getSuppliedCells(newG,obj.belong))
+        } */
         break;
       case id: pickUpID(null);
         break;
@@ -42,16 +49,25 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         else { pickUpID(id); }
     }
   };
+  
   function isAvailable(id: number) {
     if (!isActive) return false;
     else if (pickedID !== null && pickedData(pickedID) !== null && Game.canPut(G, ctx, pickedID, id))
+      
       return true;
   }
+
   function getCellColor(id: number) {
     const strongholdColor = G.places[id]?.belong
-    if (id === pickedID) { return pico8Palette.dark_purple; }
+    if (id === pickedID) { 
+      return pico8Palette.dark_purple; }
 
-    else if (isAvailable(id)) { return pico8Palette.green; }
+    else if (isAvailable(id)) { 
+      //predict supply after moving
+      if(Game.getSuppliedCells({...G, cells:G.cells.map((obj,CId)=>CId===pickedID?null:(CId===id?pickedData(pickedID):obj))},currentPlayer).includes(id))
+      {return pico8Palette.green;} 
+      else{return pico8Palette.yellow;}
+    }
 
     else if (typeof (strongholdColor) === "string") { return fictionColor(strongholdColor) }
     else {
@@ -100,11 +116,11 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       const relDef = def - off
       //show the detailed info for selected cell, otherwise only cell in danger
       if (selected) {
-        result=result.concat(offLst.map((id) => gTranslate(renderStr("⚔️", 0.2), Game.CId2Pos(id).x - 0.35, Game.CId2Pos(id).y - 0.35)).concat(
-          defLst.map((id) => gTranslate(renderStr("🛡️", 0.2), Game.CId2Pos(id).x - 0.35, Game.CId2Pos(id).y - 0.35))));
+        result=result.concat(offLst.map((id) => gTranslate(renderStr("⚔️", 0.4), Game.CId2Pos(id).x - 0.3, Game.CId2Pos(id).y - 0.3)).concat(
+          defLst.map((id) => gTranslate(renderStr("🛡️", 0.4), Game.CId2Pos(id).x - 0.3, Game.CId2Pos(id).y - 0.3))));
         }
       if (relDef < 0) {
-        result=result.concat(gTranslate(renderStr(defState(relDef), 0.3), Game.CId2Pos(CId).x + 0.3, Game.CId2Pos(CId).y - 0.3));
+        result=result.concat(gTranslate(renderStr(defState(relDef), 0.4), Game.CId2Pos(CId).x + 0.3, Game.CId2Pos(CId).y - 0.3));
       }
       return result
     }
@@ -183,7 +199,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           </p>
           {/* chosen piece info */}
           <p>
-            Piece:{pickedID !== null && ((id) => {
+            Chosen Piece:{pickedID !== null && ((id) => {
               const obj = G.cells[id];
               if (obj) {
                 return <> {spanBGColor(
@@ -195,6 +211,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             })(pickedID)} 
             </p>
             {/* action info */}
+            <p>My moves and attack:</p>
             <svg viewBox='-0.1 -0.1 6.2 1.2'>
               {renderLayer((_,id)=>{
               const moveEdRec=G.moveRecords[myID].map((p)=>p[1]);
@@ -211,13 +228,15 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
                 {edObj&&renderPiece(edObj)}
                 </>
               }
-              else{ return <><rect
+              else{ 
+                
+                return <><rect
                 width="1"
                 height="1"
                 fill={pico8Palette.red}
                 stroke={pico8Palette.dark_grey}
                 stroke-width="0.05" />
-                {atk&&renderPiece(atk[1])}</>
+                {atk&&(atk[1]==="Arsenal"?renderStr("🎪"):renderPiece(atk[1]))}</>
               }
 
               

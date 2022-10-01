@@ -5,15 +5,17 @@ import { INVALID_MOVE } from 'boardgame.io/core';
 
 export type P_ID = '0' | '1'
 
+type CellID=number
+
 export interface GameState {
   //myID:P_ID,
   //opponentID:P_ID,
   cells: (ObjInstance | null)[],
   places: (Stronghold | null)[],
-  inSupply: { [key in P_ID]: boolean[] },
-  moveRecords: { [key in P_ID]: [number, number][] }, //(stCId,edCId)
-  attackRecords: { [key in P_ID]: [number, ObjInstance] | null },
-  forcedRetreat: { [key in P_ID]: [(number | null), (number | null)] },//the start and end of retreat CId,
+  inSupply: { [key in P_ID]: CellID[] },
+  moveRecords: { [key in P_ID]: [CellID, CellID][] }, //(stCId,edCId)
+  attackRecords: { [key in P_ID]: [CellID, ObjInstance | "Arsenal"] | null },
+  forcedRetreat: { [key in P_ID]: [(CellID | null), (CellID | null)] },//the start and end of retreat CId,
 }
 export function dualPlayerID(id: P_ID) {
   switch (id) {
@@ -98,6 +100,11 @@ export const TicTacToe: Game<GameState> = {
         if (retreatSt !== null) {
           G.forcedRetreat[cPlayer] = [null, edCId];
         }
+
+
+
+
+
         update(G, ctx);
       }
       else
@@ -144,11 +151,15 @@ function update(G: GameState, ctx: Ctx) {
   G.places.forEach((strong, CId) => {
     if (!strong) { }
     else if (strong.placeType === "Mountain") { }
-    else if (strong.placeType === "Arsenal") {
-      const obj = G.cells[CId];
-      //obj is a enemy, and have offense, and is supplied
-      if (obj && strong.belong && obj.belong !== strong.belong && obj.offense > 0 && obj.supplied) {
-        strong.belong = null;
+    //if on arsenals, 
+    else if (strong.placeType === "Arsenal" && strong.belong) {
+
+      const obj = G.cells[CId]
+      // obj is a enemy, and have offense, and is supplied , check in update
+      if (obj && obj.belong !== strong.belong && obj.offense > 0 && obj.supplied) {
+        G.attackRecords[cPlayer] = [CId, "Arsenal"];
+
+        G.places[CId] = null;
         //strong.placeRender="🏳️"
         //then add 1 atk action
       }
@@ -167,22 +178,24 @@ function updateSuppliedCells(G: GameState, player?: P_ID) {
 
   if (player !== "1") {
     console.log("SCupdate 0")
-    let SuppliedCells0 = getSuppliedCells(G, "0");
-    G.inSupply[0] = G.inSupply[0].map((_, id) => SuppliedCells0.includes(id));
+    const SuppliedCells0 = getSuppliedCells(G, "0");
+    G.inSupply[0] = SuppliedCells0
+    // G.inSupply[0].map((_, id) => SuppliedCells0.includes(id));
   }
 
   if (player !== "0") {
     console.log("SCupdate 1")
-    let SuppliedCells1 = getSuppliedCells(G, "1");
+    const SuppliedCells1 = getSuppliedCells(G, "1");
 
-    G.inSupply[1] = G.inSupply[1].map((_, id) => SuppliedCells1.includes(id));
+    G.inSupply[1] = SuppliedCells1
+    //G.inSupply[1].map((_, id) => SuppliedCells1.includes(id));
   }
   updateSuppliedObj(G);
 }
 function updateSuppliedObj(G: GameState) {
   console.log("SOupdate")
   G.cells = G.cells.map((obj, id) => {
-    if (obj) { return { ...obj, supplied: G.inSupply[obj.belong][id] } }
+    if (obj) { return { ...obj, supplied: G.inSupply[obj.belong].includes(id) } }
     else { return null }
   })
 }
@@ -199,13 +212,13 @@ interface Position {
 
 export const BoardSize = { mx: 25, my: 20 }
 
-export function Pos2CId(x: number, y: number): number {
+export function Pos2CId(x: number, y: number): CellID {
   if (x < 0 || y < 0 || x >= BoardSize.mx || y >= BoardSize.my) { return -1 }
   else { return y * BoardSize.mx + x }
 
 }
 
-export function CId2Pos(id: number): Position {
+export function CId2Pos(id: CellID): Position {
   const ox = id % BoardSize.mx
   const oy = Math.floor(id / BoardSize.mx)
   return { x: ox, y: oy }
@@ -222,14 +235,14 @@ function DirectDistance(p1: Position, p2: Position): null | number {
   if (dx === dy || dx === 0 || dy === 0) { return Math.max(dx, dy) }
   else { return null }
 }
-function ptSetDisLessThan(set: number[], pt: number, dis: number = 1): boolean {
+function ptSetDisLessThan(set: CellID[], pt: CellID, dis: number = 1): boolean {
   return set.some((CId) => NaiveDistance(CId2Pos(pt), CId2Pos(CId)) <= dis)
 }
 
-function connectedComponents(set: number[], pts: number[]): number[] {
+function connectedComponents(set: CellID[], pts: CellID[]): number[] {
   //use CId
   let oldSet = pts
-  let newSet: number[] = []
+  let newSet: CellID[] = []
 
   do {
     //new pts are not in old, and distance is less than 1
@@ -282,9 +295,10 @@ function moveRange(G: GameState, stCId: number, speed: number = 1): number[] {
 export function canAttack(G: GameState, ctx: Ctx, CId: number): [boolean, number] {
   const cPlayer = ctx.currentPlayer as P_ID
   const obj = G.cells[CId];
+  const retreatSt = G.forcedRetreat[cPlayer][0]
 
-  //if one haven't attacked and obj is enemy
-  if (G.attackRecords[cPlayer] === null && obj && obj.belong !== cPlayer) {
+  //if there is no retreat one haven't attacked and obj is enemy
+  if (retreatSt === null && G.attackRecords[cPlayer] === null && obj && obj.belong !== cPlayer) {
 
     const enemy = obj.belong;
     const off = getBattleFactor(G, cPlayer, true, CId)[0];
@@ -376,12 +390,12 @@ export function getBattleFactor(G: GameState, player: P_ID, isOffense: boolean, 
 
 
   //filter the effecting strongholds
-  const effectingStonghold = effectingObjs.map((id) => {
+  const effectingStronghold = effectingObjs.map((id) => {
     const obj = G.cells[id]
     const strong = G.places[id];
     return (strong && strong.defenseAdd > 0 && obj && obj.canAddDef) ? strong : null
   }).filter((obj) => obj) as Stronghold[]
-  const strongholdDef = effectingStonghold.map((obj) => obj.defenseAdd).reduce((a, b) => a + b, 0)
+  const strongholdDef = effectingStronghold.map((obj) => obj.defenseAdd).reduce((a, b) => a + b, 0)
 
   //get charged cavalries
   const chargedCavalries = getChargedCavalries(G, CId).flat().map((rPos) => {
@@ -436,14 +450,15 @@ export function getDirSuppliedLines(G: GameState, player: P_ID): [number[], numb
   return [dirSupplied, dirSuppliedLines]
 }
 
-export function getSuppliedCells(G: GameState, player: P_ID): number[] {
+export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
   const dirSupplied = getDirSuppliedLines(G, player)[0]
   //get the connected component of supplied pieces
   const myPieceLst = filterCId(G.cells, (obj) => obj.belong === player)
   const myPieceDirSupplied = myPieceLst.filter((id) => dirSupplied.includes(id))
 
   const mySuppliedPieces = connectedComponents(myPieceLst, myPieceDirSupplied)
-
+  //supplied=dirSupplied+ dis<1 of supplied pieces
+  //const suppliedCells= removeDup(G.cells.map((_,id)=>id).filter((_,id) =>ptSetDisLessThan(myPieceDirSupplied,id)).concat(dirSupplied));
   return mySuppliedPieces
 }
 
