@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { BoardProps } from 'boardgame.io/react';
 import * as Game from './Game';
 import { objTypeList, strongholdTypeList, BoardSize, Position, CellID, P_ID, GameState, ObjInstance, canPick, canAttack, canPut, CId2Pos, Pos2CId, dualPlayerID, getBattleFactor, getChargedCavalries, getDirSuppliedLines, getSuppliedCells, exportGame } from './Game';
@@ -165,8 +165,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const [mapPos, setMapPos] = useState<Position>({ x: 0, y: 0 })
   const [mapScale, setMapScale] = useState<number>(1)
   //const [onDrag, setOnDrag]=useState<boolean>(false)
-
-  const gestureBind = useGesture(
+  const boardRef=useRef(null)
+  //const gestureBind = 
+  const gesture=useGesture(
     {
       onDrag: (state) => {
         const e = state.event
@@ -185,28 +186,38 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         if (newScale > 0.5 && newScale < 10) { setMapScale(newScale); }
       },
       onPinch: (state) => {
-        const spd = 0.01
-        const newScale = (1 + spd * (state.offset[0] + state.offset[1]))
-        if (newScale > 0.5 && newScale < 10) { setMapScale(newScale); }
+        
+        const newScale =  state.offset[0]
+        //if (newScale > 0.5 && newScale < 10) {  }
+        
+        setMapScale(newScale);
       },
 
     },
     {
+      target:boardRef,
       eventOptions: { passive: false },
       preventDefault: true,
     }
-  )
+  );
 
-
+  
 
   const gameBoard = (
 
     <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}
-      {...gestureBind()}
+    ref={boardRef}
     //onWheel={myOnWheel} onMouseMove={drag} onMouseDown={startDarg} onMouseUp={endDarg} onMouseLeave={endDarg}
     //onTouchStart={startDarg} onTouchEnd={endDarg} onTouchCancel={endDarg}
     >
       <g transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${mapPos.x - BoardSize.mx / 2} ${mapPos.y - BoardSize.my / 2})`}>
+      <rect
+      x={-0.6} y={-0.6}
+          width="100%"
+          height="100%"
+          fill={pico8Palette.light_peach}
+          stroke={pico8Palette.dark_grey}
+          stroke-width="0.05" />
         {/* background */}
         {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, -0.8))}
         {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), -0.8, id))}
@@ -407,16 +418,19 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       <h1>Kriegspiel</h1>
       <div style={{ height: "auto", fontFamily: "'Lato', sans-serif", clear: "both", display: "flex" }}>
 
-        <div style={{ maxHeight: "85vh", width: "105vh", border: `2px solid ${pico8Palette.dark_green}` }}>
+        <div style={{ height: "95vh", width: "115vh", float:"left",
+        border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`,
+        touchAction: 'none' }}         >
           {/* svg Game Board */}
           {gameBoard}
 
         </div>
 
         {/* info UI */}
-        <div style={{  /* position: "fixed", right:"0", */float: "left",
+        <div style={{  /* position: "fixed", right:"0", */float:"left",
           border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`
         }}>
+          
           <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} />
           {editMode ? sideBarEdit : sideBarPlay}
 

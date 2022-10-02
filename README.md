@@ -1,6 +1,8 @@
 # Le Jeu de la Guerre
 
-A WEB implementation of Guy Debord's A Game of War ([Le Jeu de la Guerre](https://www.wikiwand.com/fr/Le_Jeu_de_la_guerre_(livre))). Powered by [boardgame.io](https://boardgame.io/).
+Try on the [GitHub page](https://iamcxds.github.io/kriegspiel).
+
+A WEB implementation of Guy Debord's A Game of War ([Le Jeu de la Guerre](https://www.wikiwand.com/fr/Le_Jeu_de_la_guerre_(livre))). Powered by [boardgame.io](https://boardgame.io/). The graphic is based on svg+emoji, with [Pico8's Palette](https://pico-8.fandom.com/wiki/Palette).
 
 ## About the Game
 
