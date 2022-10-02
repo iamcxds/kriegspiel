@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { BoardProps } from 'boardgame.io/react';
 import * as Game from './Game';
-import { objTypeList, strongholdTypeList, BoardSize, CellID, P_ID, GameState, ObjInstance, canPick, canAttack, canPut, CId2Pos, Pos2CId, dualPlayerID, getBattleFactor, getChargedCavalries, getDirSuppliedLines, getSuppliedCells, exportGame } from './Game';
+import { objTypeList, strongholdTypeList, BoardSize, Position, CellID, P_ID, GameState, ObjInstance, canPick, canAttack, canPut, CId2Pos, Pos2CId, dualPlayerID, getBattleFactor, getChargedCavalries, getDirSuppliedLines, getSuppliedCells, exportGame } from './Game';
 import { Ctx } from 'boardgame.io';
 //import './Board.css'
 import { Console } from 'console';
+import { useDrag, useGesture } from '@use-gesture/react'
 
 const getWinner = (ctx: Ctx): string | null => {
   if (!ctx.gameover) return null;
@@ -104,23 +105,29 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     const RelOff = MyOff - EnemyDef
     const RelDef = MyDef - EnemyOff
     const obj = nonNull ? G.cells[id] : null;
-    const myOffTr =
-      <tr>
-        <td style={{ backgroundColor: fictionColor(myID) }}>
-          MyOff: {MyOff} {offState(RelOff)}</td>
-        <td style={{ backgroundColor: fictionColor(opponentID) }}>
-          EnemyDef: {EnemyDef} {defState(-RelOff)}</td>
-      </tr>
-    const myDefTr =
-      <tr>
-        <td style={{ backgroundColor: fictionColor(myID) }}>
-          MyDef: {MyDef} {defState(RelDef)} </td>
-        <td style={{ backgroundColor: fictionColor(opponentID) }}>
-          EnemyOff: {EnemyOff} {offState(-RelDef)}</td>
-      </tr>
+    const myOffTd = <td style={{ backgroundColor: fictionColor(myID) }}>
+      MyAtk: {MyOff} {offState(RelOff)}</td>
+    const myDefTd = <td style={{ backgroundColor: fictionColor(myID) }}>
+      MyDef: {MyDef} {defState(RelDef)} </td>
+    const eDefTd = <td style={{ backgroundColor: fictionColor(opponentID) }}>
+      EnemyDef: {EnemyDef} {defState(-RelOff)}</td>
+    const eOffTd = <td style={{ backgroundColor: fictionColor(opponentID) }}>
+      EnemyAtk: {EnemyOff} {offState(-RelDef)}</td>
+
 
     return (<table>
-      {obj?.belong === opponentID ? <>{myOffTr}</> : <>{myDefTr}</>}
+      {obj?.belong === opponentID ? <><tr>
+        {eDefTd}{myOffTd}
+      </tr>
+        <tr>
+          {eOffTd}{myDefTd}
+        </tr></> :
+        <><tr>
+          {myDefTd}{eOffTd}
+        </tr>
+          <tr>
+            {myOffTd}{eDefTd}
+          </tr></>}
 
     </table>)
   }
@@ -154,88 +161,134 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   }
 
+  //map move ui
+  const [mapPos, setMapPos] = useState<Position>({ x: 0, y: 0 })
+  const [mapScale, setMapScale] = useState<number>(1)
+  //const [onDrag, setOnDrag]=useState<boolean>(false)
+
+  const gestureBind = useGesture(
+    {
+      onDrag: (state) => {
+        const e = state.event
+        const svg = e.target as SVGAElement
+        const CTM = svg.getScreenCTM()
+        if (CTM) {
+          const move = state.offset
+          const dx = move[0] / (CTM.a)
+          const dy = move[1] / (CTM.d)
+          setMapPos({ x: dx, y: dy });
+        }
+      },
+      onWheel: (state) => {
+        const spd = 0.001
+        const newScale = mapScale * (1 - spd * state.movement[1])
+        if (newScale > 0.5 && newScale < 10) { setMapScale(newScale); }
+      },
+      onPinch: (state) => {
+        const spd = 0.01
+        const newScale = (1 + spd * (state.offset[0] + state.offset[1]))
+        if (newScale > 0.5 && newScale < 10) { setMapScale(newScale); }
+      },
+
+    },
+    {
+      eventOptions: { passive: false },
+      preventDefault: true,
+    }
+  )
+
+
+
   const gameBoard = (
-    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}>
 
-      {/* background */}
-      {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, -0.8))}
-      {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), -0.8, id))}
-      {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, BoardSize.my - 1 + 0.8))}
-      {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), BoardSize.mx - 1 + 0.8, id))}
-      {renderLayer((_, id) => <rect
-        key={id}
-        width="1"
-        height="1"
-        fill={getCellColor(id)}
-        stroke={pico8Palette.dark_grey}
-        stroke-width="0.05" />
-      )}
-      <line x1="0" y1={BoardSize.my / 2} x2={BoardSize.mx} y2={BoardSize.my / 2} stroke={pico8Palette.lavender} stroke-width="0.2" />
-      {/* supply line */}
-      {getDirSuppliedLines(G, '0')[1].map((lines) => lines.map((lineLst) => {
+    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}
+      {...gestureBind()}
+    //onWheel={myOnWheel} onMouseMove={drag} onMouseDown={startDarg} onMouseUp={endDarg} onMouseLeave={endDarg}
+    //onTouchStart={startDarg} onTouchEnd={endDarg} onTouchCancel={endDarg}
+    >
+      <g transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${mapPos.x - BoardSize.mx / 2} ${mapPos.y - BoardSize.my / 2})`}>
+        {/* background */}
+        {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, -0.8))}
+        {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), -0.8, id))}
+        {Array(BoardSize.mx).fill(null).map((_, id) => gTranslate(renderStr((id + 1).toString()), id, BoardSize.my - 1 + 0.8))}
+        {Array(BoardSize.my).fill(null).map((_, id) => gTranslate(renderStr(String.fromCharCode(65 + id)), BoardSize.mx - 1 + 0.8, id))}
+        {renderLayer((_, id) => <rect
+          key={id}
+          width="1"
+          height="1"
+          fill={getCellColor(id)}
+          stroke={pico8Palette.dark_grey}
+          stroke-width="0.05" />
+        )}
+        <line x1="0" y1={BoardSize.my / 2} x2={BoardSize.mx} y2={BoardSize.my / 2} stroke={pico8Palette.lavender} stroke-width="0.2" />
+        {/* supply line */}
+        {getDirSuppliedLines(G, '0')[1].map((lines) => lines.map((lineLst) => {
 
-        /*  let stPos = CId2Pos(lineLst[0]);
-         let edPos = CId2Pos(lineLst[lineLst.length - 1]);
-         return stPos && edPos && gTranslate(<line x1={stPos.x} y1={stPos.y} x2={edPos.x} y2={edPos.y} stroke={fictionColor('0')} stroke-width="0.1" stroke-dasharray="0.5 0.1" />, 0.45, 0.45)
-        */
-        return lines.length > 1 && gTranslate(drawLine(lineLst[0], lineLst[lineLst.length - 1], fictionColor('0'), 0.05, [0.5, 0.1]), -0.05, -0.05)
-      }))}
-      {getDirSuppliedLines(G, '1')[1].map((lines) => lines.map((lineLst) => {
+          /*  let stPos = CId2Pos(lineLst[0]);
+           let edPos = CId2Pos(lineLst[lineLst.length - 1]);
+           return stPos && edPos && gTranslate(<line x1={stPos.x} y1={stPos.y} x2={edPos.x} y2={edPos.y} stroke={fictionColor('0')} stroke-width="0.1" stroke-dasharray="0.5 0.1" />, 0.45, 0.45)
+          */
+          return lines.length > 1 && gTranslate(drawLine(lineLst[0], lineLst[lineLst.length - 1], fictionColor('0'), 0.05, [0.5, 0.1]), -0.05, -0.05)
+        }))}
+        {getDirSuppliedLines(G, '1')[1].map((lines) => lines.map((lineLst) => {
 
-        return lines.length > 1 && gTranslate(drawLine(lineLst[0], lineLst[lineLst.length - 1], fictionColor('1'), 0.05, [0.5, 0.1]), 0.05, 0.05)
-      }))}
-      {/* stronghold */}
-      {renderLayer((stronghold, id) => <>{stronghold && renderStr(stronghold.placeRender, 1)}</>, G.places)}
-      {/* move indication */}
-      {G.moveRecords['0'].map(([st, ed]) => drawLine(st, ed, pico8Palette.dark_blue, 0.5, [0.3, 0.1]))}
-      {G.moveRecords['1'].map(([st, ed]) => drawLine(st, ed, pico8Palette.brown, 0.5, [0.3, 0.1]))}
+          return lines.length > 1 && gTranslate(drawLine(lineLst[0], lineLst[lineLst.length - 1], fictionColor('1'), 0.05, [0.5, 0.1]), 0.05, 0.05)
+        }))}
+        {/* stronghold */}
+        {renderLayer((stronghold, id) => <>{stronghold && renderStr(stronghold.placeRender, 1)}</>, G.places)}
+        {/* move indication */}
+        {G.moveRecords['0'].map(([st, ed]) => drawLine(st, ed, pico8Palette.dark_blue, 0.5, [0.3, 0.1]))}
+        {G.moveRecords['1'].map(([st, ed]) => drawLine(st, ed, pico8Palette.brown, 0.5, [0.3, 0.1]))}
 
-      {/* piece */}
-      {renderLayer((obj, id) => <>{obj && renderPiece(obj)}</>, G.cells)}
-      {/* attack */}
-      {[G.attackRecords['0'], G.attackRecords['1']].map((atk) =>
-        atk !== null && gTranslate(renderStr("💥", 0.7), CId2Pos(atk[0]).x, CId2Pos(atk[0]).y)
-      )}
-      {/* charge */}
-      {renderLayer((obj, id) => <>{obj && getChargedCavalries(G, id).map((chargeRow) =>
-        chargeRow.map((pos, id, row) =>
-          gTranslate(renderStr("⚡"), pos.x - 0.5 * row[0].x, pos.y - 0.5 * row[0].y)
-        ))}</>
-        , G.cells)}
-      {/* battle info indication */}
-      {G.cells.map((_, id) => <>{renderBattleEffect(id, id === pickedID)}</>)
-      }
-      {/* control */}
-      {renderLayer((_, id) => <rect onClick={() => myOnClick(id)} width="1"
-        height="1" fillOpacity="0" />)}
-
+        {/* piece */}
+        {renderLayer((obj, id) => <>{obj && renderPiece(obj)}</>, G.cells)}
+        {/* attack */}
+        {[G.attackRecords['0'], G.attackRecords['1']].map((atk) =>
+          atk !== null && gTranslate(renderStr("💥", 0.7), CId2Pos(atk[0]).x, CId2Pos(atk[0]).y)
+        )}
+        {/* charge */}
+        {renderLayer((obj, id) => <>{obj && getChargedCavalries(G, id).map((chargeRow) =>
+          chargeRow.map((pos, id, row) =>
+            gTranslate(renderStr("⚡"), pos.x - 0.5 * row[0].x, pos.y - 0.5 * row[0].y)
+          ))}</>
+          , G.cells)}
+        {/* battle info indication */}
+        {G.cells.map((_, id) => <>{renderBattleEffect(id, id === pickedID)}</>)
+        }
+        {/* control */}
+        {renderLayer((_, id) => <rect onClick={() => myOnClick(id)} width="1"
+          height="1" fillOpacity="0" />)}
+      </g>
     </svg>
+
   )
 
   const sideBarPlay = (
     <div id="PlayUI">
+
+      <p>Cell Coord: {pickedID !== null && ((pos) => { return `(${pos.x + 1}, ${String.fromCharCode(65 + pos.y)})`; })(CId2Pos(pickedID))}, CellId: {pickedID}
+      </p>
       {battleFactorTable(pickedID)}
       <p>{spanBGColor(<>It's {isActive ? "my" : "opponent's"} turn.</>, fictionColor(currentPlayer))}
         <button disabled={!isActive} onClick={props.undo} >Undo</button>
         <button disabled={!isActive} onClick={() => { events.endTurn && events.endTurn(); }} >End Turn</button>
       </p>
-      <p>Cell-Coord: {pickedID !== null && ((pos) => { return "(" + pos.x + "," + pos.y + ")"; })(CId2Pos(pickedID))}, Cell-Id: {pickedID}
-      </p>
-      {/* chosen piece info */}
-      <p>
-        Chosen Point:{pickedID !== null && ((id) => {
-          const obj = G.cells[id];
-          const str = G.places[id];
 
-          return (<>
-            {obj && <p>
-              {spanBGColor(<>{obj.objRender + obj.typeName}, offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense}, range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
-              <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
-            </p>}
-            {str && <p>{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </p>}
-          </>);
-        })(pickedID)}
-      </p>
+      {/* chosen piece info */}
+
+      {pickedID !== null && ((id) => {
+        const obj = G.cells[id];
+        const str = G.places[id];
+
+        return (<>
+          {obj && <p> Chosen Point:
+            {spanBGColor(<>{obj.objRender + obj.typeName},<br /> offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense},<br /> range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
+            <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
+          </p>}
+          {str && <p>{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </p>}
+        </>);
+      })(pickedID)}
+
       {/* action info */}
       <p>My moves and attack:</p>
       <svg viewBox='-0.1 -0.1 6.2 1.2'>
@@ -350,22 +403,24 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   )
 
   return (
-    <main>
+    <main >
       <h1>Kriegspiel</h1>
-      <div style={{ width: "100%", content: "", clear: "both", display: "flex" }}>
+      <div style={{ height: "auto", fontFamily: "'Lato', sans-serif", clear: "both", display: "flex" }}>
 
-        <div style={{ width: "80%", float: "left", border: `2px solid ${pico8Palette.dark_green}` }}>
+        <div style={{ maxHeight: "85vh", width: "105vh", border: `2px solid ${pico8Palette.dark_green}` }}>
           {/* svg Game Board */}
           {gameBoard}
 
         </div>
 
         {/* info UI */}
-        <div style={{ width: "20%", float: "left", border: `2px solid ${pico8Palette.dark_green}`, }}>
+        <div style={{  /* position: "fixed", right:"0", */float: "left",
+          border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`
+        }}>
           <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} />
           {editMode ? sideBarEdit : sideBarPlay}
 
-
+          <p>More information <a href="https://github.com/iamcxds/kriegspiel">here</a>.</p>
 
 
         </div>
