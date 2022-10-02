@@ -124,6 +124,26 @@ export const Kriegspiel: Game<GameState> = {
     }
   },
 
+  ai: {
+    enumerate: (G, ctx) => {
+      let evts = [{ event: "endTurn", args: [] }]
+      const CIdLst = Array.from(Array(BoardSize.mx * BoardSize.my).keys())
+      const cPlayer = ctx.currentPlayer as P_ID
+      //const myPieceId = filterCId(G.cells,(obj)=>obj.belong===cPlayer)
+      //const opPieceId = filterCId(G.cells,(obj)=>obj.belong!==cPlayer)
+      let atks = CIdLst.filter((id) => canAttack(G, ctx, id)[0]).map((id) => { return { move: "attack", args: [id] } })
+      let moves = CIdLst.filter((stCId) => canPick(G, ctx, stCId)).flatMap((stCId) => { //simply predict supply line after move
+        const newG: GameState = { ...G, cells: G.cells.map((obj, CId) => CId === stCId ? null : obj) }
+        const suppPred = getSuppliedCells(newG, cPlayer);
+        const dirSuppPred = getDirSuppliedLines(newG, cPlayer)[0];
+        //move to dir supplied or close friendly units.
+        return CIdLst.filter((edCId) => canPut(G, ctx, stCId, edCId) && (dirSuppPred.includes(edCId) || ptSetDisLessThan(suppPred, edCId))).map((edCId) => { return { move: "movePiece", args: [stCId, edCId] } })
+      })
+      let result = [...evts, ...atks, ...moves]
+      return result
+    },
+    //objectives: (G,ctx)=>{}
+  },
 };
 
 //data save and load board use FEN 
@@ -144,7 +164,7 @@ function board2FEN<T>(board: (T | null)[], encode: (t: T, id: CellID) => string)
       result.push(encode(obj, id));
     }
   });
-  return result.join('|')
+  return '|' + result.join('|') + '|'
 }
 function FEN2board<T>(fen: string, decode: (str: string) => (T | null)): (T | null)[] {
   let data: string[] = fen.split('|');
@@ -243,8 +263,9 @@ function decodeStrong(s: string): Stronghold | null {
   }
   else return null;
 }
-export const onlyMap="32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|19|🎪.0|1|⛰️|24|⛰️|24|🛣️|24|⛰️|24|⛰️|10|🏰|13|⛰️|2|🏰|89|🏰|32|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|24|🛣️|6|🏰|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1"
-const game1 = "32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|14|🚩.0|4|🎪.0|1|⛰️|24|⛰️|19|🚚.0|4|💂.0/🛣️.0|17|🏇.0|🏇.0|1|💂.0|💂.0|🎉.0|💂.0|⛰️|17|🏇.0|🏇.0|💂.0|🚀.0|💂.0|💂.0|💂.0|⛰️|10|🏰|9|💂.0|3|⛰️|2|🏰|51|💂.1|💂.1|💂.1|🎉.1|🏇.1|20|💂.1|💂.1|💂.1|🏇.1|🏇.1|8|🏰|11|💂.1|💂.1|💂.1|🏇.1|17|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|🚚.1|23|🚀.1/🛣️.1|6|🚩.1/🏰.1|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1"
+export const onlyMap = "|32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|19|🎪.0|1|⛰️|24|⛰️|24|🛣️|24|⛰️|24|⛰️|10|🏰|13|⛰️|2|🏰|76|🏰|12|🏰|32|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|24|🛣️|6|🏰|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1|"
+const game1 = "|32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|14|🚩.0|4|🎪.0|1|⛰️|24|⛰️|19|🚚.0|4|💂.0/🛣️.0|17|🏇.0|🏇.0|1|💂.0|💂.0|🎉.0|💂.0|⛰️|17|🏇.0|🏇.0|💂.0|🚀.0|💂.0|💂.0|💂.0|⛰️|10|🏰|9|💂.0|3|⛰️|2|🏰|51|💂.1|💂.1|💂.1|🎉.1|🏇.1|20|💂.1/🏰.1|💂.1|💂.1|🏇.1|🏇.1|8|🏰|11|💂.1|💂.1|💂.1|🏇.1|17|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|🚚.1|23|🚀.1/🛣️.1|6|🚩.1/🏰.1|17|⛰️|24|⛰️|24|⛰️|36|🎪.1|19|🎪.1|"
+const game2 = "|32|🏰|6|🎪.0|19|⛰️|⛰️|⛰️|⛰️|19|🎪.0|1|⛰️|24|⛰️|24|🛣️|20|🏇.0|1|🚀.0|1|⛰️|21|💂.0|2|⛰️|10|🎉.0/🏰.0|💂.0|8|💂.0|1|🚩.0|1|⛰️|2|💂.0/🏰.0|💂.0|6|💂.0|💂.0|🏇.0|🚚.0|21|💂.0|💂.0|🏇.0|🏇.0|40|🚩.1/🏰.1|12|💂.1/🏰.1|💂.1|9|💂.1|1|💂.1|12|🏇.1|6|⛰️|⛰️|⛰️|⛰️|⛰️|⛰️|7|💂.1|3|🎉.1|4|🚀.1|2|💂.1|💂.1|3|🛣️|6|💂.1/🏰.1|11|🚚.1|🏇.1|💂.1|3|⛰️|19|🏇.1|🏇.1|3|⛰️|24|⛰️|36|🎪.1|19|🎪.1|"
 //update game 
 function update(G: GameState, ctx: Ctx) {
   //check supply
@@ -586,7 +607,7 @@ export function getDirSuppliedLines(G: GameState, player: P_ID): [CellID[], Cell
 
   }
 
-  return [dirSupplied, removeDup(dirSuppliedLines)]
+  return [removeDup(dirSupplied), dirSuppliedLines]
 }
 
 export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {

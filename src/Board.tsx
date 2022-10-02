@@ -165,9 +165,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const [mapPos, setMapPos] = useState<Position>({ x: 0, y: 0 })
   const [mapScale, setMapScale] = useState<number>(1)
   //const [onDrag, setOnDrag]=useState<boolean>(false)
-  const boardRef=useRef(null)
+  const boardRef = useRef(null)
   //const gestureBind = 
-  const gesture=useGesture(
+  const gesture = useGesture(
     {
       onDrag: (state) => {
         const e = state.event
@@ -181,38 +181,40 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         }
       },
       onWheel: (state) => {
-        const spd = 0.001
+        const spd = 0.0007
+        console.log(state.offset)
         const newScale = mapScale * (1 - spd * state.movement[1])
-        if (newScale > 0.5 && newScale < 10) { setMapScale(newScale); }
+        //if (newScale > 0.5 && newScale < 10) {  }
+        setMapScale(newScale);
       },
       onPinch: (state) => {
-        
-        const newScale =  state.offset[0]
+
+        const newScale = state.offset[0]
         //if (newScale > 0.5 && newScale < 10) {  }
-        
+
         setMapScale(newScale);
       },
 
     },
     {
-      target:boardRef,
+      target: boardRef,
       eventOptions: { passive: false },
       preventDefault: true,
     }
   );
 
-  
+
 
   const gameBoard = (
 
     <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}
-    ref={boardRef}
+      ref={boardRef}
     //onWheel={myOnWheel} onMouseMove={drag} onMouseDown={startDarg} onMouseUp={endDarg} onMouseLeave={endDarg}
     //onTouchStart={startDarg} onTouchEnd={endDarg} onTouchCancel={endDarg}
     >
       <g transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${mapPos.x - BoardSize.mx / 2} ${mapPos.y - BoardSize.my / 2})`}>
-      <rect
-      x={-0.6} y={-0.6}
+        <rect
+          x={-0.6} y={-0.6}
           width="100%"
           height="100%"
           fill={pico8Palette.light_peach}
@@ -276,10 +278,20 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   const sideBarPlay = (
     <div id="PlayUI">
+      {/* how many units left */}
+      <label>Over All:</label>
+      <p> {spanBGColor(<>{objTypeList.map((type) => {
+        const num = Game.filterCId(G.cells, (obj) => obj.typeName === type && obj.belong === myID).length
+        return Game.objDataList[type].objRender + num
+      })}</>, fictionColor(myID))}<br />
+        {spanBGColor(<>{objTypeList.map((type) => {
+          const num = Game.filterCId(G.cells, (obj) => obj.typeName === type && obj.belong === opponentID).length
+          return Game.objDataList[type].objRender + num
+        })}</>, fictionColor(opponentID))}
 
-      <p>Cell Coord: {pickedID !== null && ((pos) => { return `(${pos.x + 1}, ${String.fromCharCode(65 + pos.y)})`; })(CId2Pos(pickedID))}, CellId: {pickedID}
       </p>
-      {battleFactorTable(pickedID)}
+
+
       <p>{spanBGColor(<>It's {isActive ? "my" : "opponent's"} turn.</>, fictionColor(currentPlayer))}
         <button disabled={!isActive} onClick={props.undo} >Undo</button>
         <button disabled={!isActive} onClick={() => { events.endTurn && events.endTurn(); }} >End Turn</button>
@@ -287,21 +299,26 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
       {/* chosen piece info */}
 
-      {pickedID !== null && ((id) => {
+      <p>Chosen Unit: {pickedID !== null && ((id) => {
         const obj = G.cells[id];
         const str = G.places[id];
 
         return (<>
-          {obj && <p> Chosen Point:
+          {obj && <>
             {spanBGColor(<>{obj.objRender + obj.typeName},<br /> offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense},<br /> range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
             <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
-          </p>}
-          {str && <p>{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </p>}
+          </>}
+          {str && <><br />{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </>}
         </>);
-      })(pickedID)}
+      })(pickedID)}</p>
+
+      <label>Cell Coord: {pickedID !== null && ((pos) => { return `(${pos.x + 1}, ${String.fromCharCode(65 + pos.y)})`; })(CId2Pos(pickedID))}, CellId: {pickedID}
+      </label>
+      {/* battle factor */}
+      {battleFactorTable(pickedID)}
 
       {/* action info */}
-      <p>My moves and attack:</p>
+      <label>My Moves and Attack:</label>
       <svg viewBox='-0.1 -0.1 6.2 1.2'>
         {renderLayer((_, id) => {
           const moveEdRec = G.moveRecords[myID].map((p) => p[1]);
@@ -337,6 +354,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       </svg>
       {/* retreat info */}
       <p>{G.forcedRetreat[currentPlayer][0] !== null && "🏃‍♂️💥 I must retreat my unit first."}</p>
+      <label>{winner && `Winner is ${winner}!`}</label>
     </div>
   )
   function editorClick(id: CellID) {
@@ -419,19 +437,21 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       <h1>Kriegspiel</h1>
       <div style={{ height: "auto", fontFamily: "'Lato', sans-serif", clear: "both", display: "flex" }}>
 
-        <div style={{ height: "95vh", width: "115vh", float:"left",
-        border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`,
-        touchAction: 'none' }}         >
+        <div style={{
+          height: "95vh", width: "115vh", float: "left",
+          border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`,
+          touchAction: 'none'
+        }}         >
           {/* svg Game Board */}
           {gameBoard}
 
         </div>
 
         {/* info UI */}
-        <div style={{  /* position: "fixed", right:"0", */maxWidth:"25%", float:"left",
+        <div style={{  /* position: "fixed", right:"0", */maxWidth: "25%", float: "left",
           border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`
         }}>
-          
+
           <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} />
           {editMode ? sideBarEdit : sideBarPlay}
 
