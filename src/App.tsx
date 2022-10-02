@@ -1,12 +1,12 @@
 import { Client } from 'boardgame.io/react';
-import { TicTacToe } from './Game';
+import { Kriegspiel } from './Game';
 import { Local } from 'boardgame.io/multiplayer';
 import { Board }  from './Board';
 import { DebugOpt } from 'boardgame.io/dist/types/src/client/client';
 
 
-const TicTacToeClient = Client({
-  game: TicTacToe,
+const KriegspielClient = Client({
+  game: Kriegspiel,
   board: Board,
   debug: {collapseOnLoad:true}
 //  multiplayer: Local(),
@@ -14,7 +14,7 @@ const TicTacToeClient = Client({
 
 const App = () => (
   <div>
-    <TicTacToeClient /* playerID="0" */ />
+    <KriegspielClient /* playerID="0" */ />
     {/* <TicTacToeClient playerID="1" /> */}
   </div>
 );

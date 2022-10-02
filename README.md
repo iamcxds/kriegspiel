@@ -1,6 +1,6 @@
 # Le Jeu de la Guerre
 
-Try on the [GitHub page](https://iamcxds.github.io/kriegspiel).
+Try it on the [GitHub page](https://iamcxds.github.io/kriegspiel).
 
 A WEB implementation of Guy Debord's A Game of War ([Le Jeu de la Guerre](https://www.wikiwand.com/fr/Le_Jeu_de_la_guerre_(livre))). Powered by [boardgame.io](https://boardgame.io/). The graphic is based on svg+emoji, with [Pico8's Palette](https://pico-8.fandom.com/wiki/Palette).
 
@@ -9,7 +9,7 @@ A WEB implementation of Guy Debord's A Game of War ([Le Jeu de la Guerre](https:
 Here are some materials about the game and its history.
 
 - [BGG page](https://boardgamegeek.com/boardgame/27323/le-jeu-de-la-guerre)
-- [On class wargames](https://www.classwargames.net/?p=1636)
+- [On Class Wargames](https://www.classwargames.net/?p=1636)
 - [Kriegspiel](http://r-s-g.org/kriegspiel/about.php)
 
 ### Pieces and Strongholds

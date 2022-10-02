@@ -5,7 +5,7 @@ import { objTypeList, strongholdTypeList, BoardSize, Position, CellID, P_ID, Gam
 import { Ctx } from 'boardgame.io';
 //import './Board.css'
 import { Console } from 'console';
-import { useDrag, useGesture } from '@use-gesture/react'
+import { useGesture } from '@use-gesture/react'
 
 const getWinner = (ctx: Ctx): string | null => {
   if (!ctx.gameover) return null;
@@ -384,6 +384,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
         </svg>
         <input type="button" value="Change Color" onClick={() => { setEditFiction(dualPlayerID(editFiction)) }} />
+        <input type="button" value="Reset Board" onClick={() => moves.load(Game.onlyMap)} />
       </div>
       {/* Game Data */}
       <form>
@@ -427,7 +428,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         </div>
 
         {/* info UI */}
-        <div style={{  /* position: "fixed", right:"0", */float:"left",
+        <div style={{  /* position: "fixed", right:"0", */maxWidth:"25%", float:"left",
           border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`
         }}>
           
