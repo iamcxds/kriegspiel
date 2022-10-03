@@ -22,10 +22,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const currentPlayer = ctx.currentPlayer as P_ID;
   const [pickedID, pickUpID] = useState<CellID | null>(null)
 
-  const [gameData, setGameData] = useState<string>('');
-  const [editMode, setEditMode] = useState<boolean>(false);
-  const [editState, setEditState] = useState<(CellID | null)>(null)
-  const [editFiction, setEditFiction] = useState<P_ID>('0')
+ 
 
   function pickedData(pId: CellID | null) {
     if (pId !== null && canPick(G, ctx, pId) && isActive) { return G.cells[pId]; }
@@ -95,51 +92,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     }
   }
 
-  //render info UI  
-  function battleFactorTable(id: CellID | null) {
-    const nonNull = id !== null
-    const MyOff = nonNull ? getBattleFactor(G, myID, true, id)[0] : 0
-    const MyDef = nonNull ? getBattleFactor(G, myID, false, id)[0] : 0
-    const EnemyDef = nonNull ? getBattleFactor(G, opponentID, false, id)[0] : 0
-    const EnemyOff = nonNull ? getBattleFactor(G, opponentID, true, id)[0] : 0
-    const RelOff = MyOff - EnemyDef
-    const RelDef = MyDef - EnemyOff
-    const obj = nonNull ? G.cells[id] : null;
-    const myOffTd = <td style={{ backgroundColor: fictionColor(myID) }}>
-      MyAtk: {MyOff} {offState(RelOff)}</td>
-    const myDefTd = <td style={{ backgroundColor: fictionColor(myID) }}>
-      MyDef: {MyDef} {defState(RelDef)} </td>
-    const eDefTd = <td style={{ backgroundColor: fictionColor(opponentID) }}>
-      EnemyDef: {EnemyDef} {defState(-RelOff)}</td>
-    const eOffTd = <td style={{ backgroundColor: fictionColor(opponentID) }}>
-      EnemyAtk: {EnemyOff} {offState(-RelDef)}</td>
-
-
-    return (<table>
-      {obj?.belong === opponentID ? <><tr>
-        {eDefTd}{myOffTd}
-      </tr>
-        <tr>
-          {eOffTd}{myDefTd}
-        </tr></> :
-        <><tr>
-          {myDefTd}{eOffTd}
-        </tr>
-          <tr>
-            {myOffTd}{eDefTd}
-          </tr></>}
-
-    </table>)
-  }
-  function offState(n: number) {
-    if (n > 0) return "⚔️"
-    else return ""
-  }
-  function defState(n: number) {
-    if (n >= 0) return "🛡️"
-    else if (n === -1) return "🏃‍♂️"
-    else return "💀"
-  }
+  
   function renderBattleEffect(CId: CellID, selected: boolean) {
     const obj = G.cells[CId];
     let result: JSX.Element[] = []
@@ -166,8 +119,8 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const [mapScale, setMapScale] = useState<number>(1)
   //const [onDrag, setOnDrag]=useState<boolean>(false)
   const boardRef = useRef(null)
-  //const gestureBind = 
-  const gesture = useGesture(
+  
+  const gestureBind = useGesture(
     {
       onDrag: (state) => {
         const e = state.event
@@ -181,8 +134,10 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         }
       },
       onWheel: (state) => {
+        const evt =state.event;
+        evt.preventDefault();
         const spd = 0.0007
-        console.log(state.offset)
+        
         const newScale = mapScale * (1 - spd * state.movement[1])
         //if (newScale > 0.5 && newScale < 10) {  }
         setMapScale(newScale);
@@ -203,7 +158,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     }
   );
 
-
+  //render Main board
 
   const gameBoard = (
 
@@ -276,11 +231,58 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   )
 
+  //render Battle info UI  
+  function battleFactorTable(id: CellID | null) {
+    const nonNull = id !== null
+    const MyOff = nonNull ? getBattleFactor(G, myID, true, id)[0] : 0
+    const MyDef = nonNull ? getBattleFactor(G, myID, false, id)[0] : 0
+    const EnemyDef = nonNull ? getBattleFactor(G, opponentID, false, id)[0] : 0
+    const EnemyOff = nonNull ? getBattleFactor(G, opponentID, true, id)[0] : 0
+    const RelOff = MyOff - EnemyDef
+    const RelDef = MyDef - EnemyOff
+    const obj = nonNull ? G.cells[id] : null;
+    const myOffTd = <td style={{ backgroundColor: fictionColor(myID) }}>
+      MyAtk: {MyOff} {offState(RelOff)}</td>
+    const myDefTd = <td style={{ backgroundColor: fictionColor(myID) }}>
+      MyDef: {MyDef} {defState(RelDef)} </td>
+    const eDefTd = <td style={{ backgroundColor: fictionColor(opponentID) }}>
+      EnemyDef: {EnemyDef} {defState(-RelOff)}</td>
+    const eOffTd = <td style={{ backgroundColor: fictionColor(opponentID) }}>
+      EnemyAtk: {EnemyOff} {offState(-RelDef)}</td>
+
+
+    return (<table>
+      {obj?.belong === opponentID ? <><tr>
+        {eDefTd}{myOffTd}
+      </tr>
+        <tr>
+          {eOffTd}{myDefTd}
+        </tr></> :
+        <><tr>
+          {myDefTd}{eOffTd}
+        </tr>
+          <tr>
+            {myOffTd}{eDefTd}
+          </tr></>}
+
+    </table>)
+  }
+  function offState(n: number) {
+    if (n > 0) return "⚔️"
+    else return ""
+  }
+  function defState(n: number) {
+    if (n >= 0) return "🛡️"
+    else if (n === -1) return "🏃‍♂️"
+    else return "💀"
+  }
+
   const sideBarPlay = (
     <div id="PlayUI">
       {/* how many units left */}
-      <label>Over All:</label>
-      <p> {spanBGColor(<>{objTypeList.map((type) => {
+      
+      <p><label>Over All:</label><br/>
+       {spanBGColor(<>{objTypeList.map((type) => {
         const num = Game.filterCId(G.cells, (obj) => obj.typeName === type && obj.belong === myID).length
         return Game.objDataList[type].objRender + num
       })}</>, fictionColor(myID))}<br />
@@ -291,7 +293,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
       </p>
 
-
+      {/* turn info */}
       <p>{spanBGColor(<>It's {isActive ? "my" : "opponent's"} turn.</>, fictionColor(currentPlayer))}
         <button disabled={!isActive} onClick={props.undo} >Undo</button>
         <button disabled={!isActive} onClick={() => { events.endTurn && events.endTurn(); }} >End Turn</button>
@@ -342,8 +344,8 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         const str = G.places[id];
         const pos = CId2Pos(pickedID)
 
-        return (<> at {pos.x + 1}{String.fromCharCode(65 + pos.y)}:
-          {obj && <>
+        return (<> at {pos.x + 1}{String.fromCharCode(65 + pos.y)}:{" "}  
+          {obj && <> 
             {spanBGColor(<>{obj.objRender + obj.typeName},<br /> offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense},<br /> range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
             <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
           </>}
@@ -351,14 +353,20 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         </>);
       })(pickedID)}</p>
 
-      
+
       {/* battle factor */}
       {battleFactorTable(pickedID)}
 
-      
+
       <label>{winner && `Winner is ${winner}!`}</label>
     </div>
   )
+  // editor
+  const [gameData, setGameData] = useState<string>('');
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [editState, setEditState] = useState<(CellID | null)>(null)
+  const [editFiction, setEditFiction] = useState<P_ID>('0')
+
   function editorClick(id: CellID) {
     switch (editState) {
       case null:
@@ -433,7 +441,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       </form>
     </div>
   )
-
+  // render all
   return (
     <main >
       <h1>Guy Debord's Kriegspiel</h1>
@@ -454,10 +462,10 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           border: `2px solid ${pico8Palette.dark_green}`, backgroundColor: `${pico8Palette.white}`
         }}>
 
-          <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} />
+          
           {editMode ? sideBarEdit : sideBarPlay}
-
-          <p>More information <a href="https://github.com/iamcxds/kriegspiel">here</a>.</p>
+          
+          <p>More information <a href="https://github.com/iamcxds/kriegspiel">here</a>. <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} /></p>
 
 
         </div>
