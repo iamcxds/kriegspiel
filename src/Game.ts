@@ -292,7 +292,7 @@ function update(G: GameState, ctx: Ctx) {
     }
     else {
       const obj = G.cells[CId]
-      if (obj) { strong.belong = obj.belong; }
+      if (obj&&obj.canAddDef) { strong.belong = obj.belong; }
       else { strong.belong = null }
     }
 

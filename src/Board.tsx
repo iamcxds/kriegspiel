@@ -297,26 +297,6 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         <button disabled={!isActive} onClick={() => { events.endTurn && events.endTurn(); }} >End Turn</button>
       </p>
 
-      {/* chosen piece info */}
-
-      <p>Chosen Unit: {pickedID !== null && ((id) => {
-        const obj = G.cells[id];
-        const str = G.places[id];
-
-        return (<>
-          {obj && <>
-            {spanBGColor(<>{obj.objRender + obj.typeName},<br /> offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense},<br /> range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
-            <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
-          </>}
-          {str && <><br />{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </>}
-        </>);
-      })(pickedID)}</p>
-
-      <label>Cell Coord: {pickedID !== null && ((pos) => { return `(${pos.x + 1}, ${String.fromCharCode(65 + pos.y)})`; })(CId2Pos(pickedID))}, CellId: {pickedID}
-      </label>
-      {/* battle factor */}
-      {battleFactorTable(pickedID)}
-
       {/* action info */}
       <label>My Moves and Attack:</label>
       <svg viewBox='-0.1 -0.1 6.2 1.2'>
@@ -353,7 +333,29 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           , Array(6).fill(null))}
       </svg>
       {/* retreat info */}
-      <p>{G.forcedRetreat[currentPlayer][0] !== null && "🏃‍♂️💥 I must retreat my unit first."}</p>
+      {G.forcedRetreat[currentPlayer][0] !== null && <p>🏃‍♂️💥 I must retreat my unit from attack first.</p>}
+
+      {/* chosen piece info */}
+
+      <p>Chosen Unit {pickedID !== null && ((id) => {
+        const obj = G.cells[id];
+        const str = G.places[id];
+        const pos = CId2Pos(pickedID)
+
+        return (<> at {pos.x + 1}{String.fromCharCode(65 + pos.y)}:
+          {obj && <>
+            {spanBGColor(<>{obj.objRender + obj.typeName},<br /> offense: {obj.objType === "Cavalry" ? "4(+3)" : obj.offense}, defense: {obj.defense},<br /> range: {obj.range}, speed: {obj.speed}</>, fictionColor(obj.belong))}
+            <button disabled={!(isActive && canAttack(G, ctx, pickedID)[0])} onClick={() => { pickUpID(null); moves.attack(pickedID); }} >💥Attack!</button>
+          </>}
+          {str && <><br />{spanBGColor(<>{str.placeRender + str.placeType}{str.defenseAdd > 0 ? (", additional defense: " + str.defenseAdd) : ''}</>, str.belong ? fictionColor(str.belong) : '')} </>}
+        </>);
+      })(pickedID)}</p>
+
+      
+      {/* battle factor */}
+      {battleFactorTable(pickedID)}
+
+      
       <label>{winner && `Winner is ${winner}!`}</label>
     </div>
   )
@@ -434,7 +436,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   return (
     <main >
-      <h1>Kriegspiel</h1>
+      <h1>Guy Debord's Kriegspiel</h1>
       <div style={{ height: "auto", fontFamily: "'Lato', sans-serif", clear: "both", display: "flex" }}>
 
         <div style={{
