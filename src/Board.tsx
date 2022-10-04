@@ -31,7 +31,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
 
   function myOnClick(id: CellID) {
-    if (editMode) {
+    if (G.editMode) {
       if (editState !== null) {
         if (editState < 6) {
           const obj = G.cells[id] ? null : Game.newPiece(objTypeList[editState], editFiction)
@@ -363,9 +363,8 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   )
   // editor
   const [gameData, setGameData] = useState<string>('');
-  const [editMode, setEditMode] = useState<boolean>(false);
   const [editState, setEditState] = useState<(CellID | null)>(null)
-  const [editFiction, setEditFiction] = useState<P_ID>('0')
+  const [editFiction, setEditFiction] = useState<P_ID>(myID)
 
   function editorClick(id: CellID) {
     switch (editState) {
@@ -463,9 +462,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         }}>
 
           
-          {editMode ? sideBarEdit : sideBarPlay}
+          {G.editMode ? sideBarEdit : sideBarPlay}
           
-          <p>More information <a href="https://github.com/iamcxds/kriegspiel">here</a>. <input type="button" value="Edit Mode" onClick={() => { setEditMode(!editMode); }} /></p>
+          <p>More information <a href="https://github.com/iamcxds/kriegspiel">here</a>. <input type="button" value="Edit Mode" onClick={() => { moves.setEditMode(!G.editMode) }} /></p>
 
 
         </div>
