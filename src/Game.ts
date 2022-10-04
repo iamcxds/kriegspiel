@@ -106,6 +106,11 @@ export const Kriegspiel: Game<GameState> = {
     load: (G, ctx, fen: string) => {
       return loadGame(fen, ctx);
     },
+    merge: (G, ctx, fen: string) => {
+      const addCells= loadGame(fen, ctx).cells;
+      const newCells=G.cells.map((obj,id)=>addCells[id]?addCells[id]:obj)
+      G.cells=newCells
+    },
     editCells: (G, ctx, CId: CellID, element: ObjInstance | null) => {
       G.cells[CId] = element;
       update(G, ctx);
@@ -117,8 +122,7 @@ export const Kriegspiel: Game<GameState> = {
   },
 
   endIf: (G, ctx) => {
-
-    if (!G.cells.some((obj, id) => canPick(G, ctx, id) || canAttack(G, ctx, id))) {
+    if (!(G.cells.some((obj, id) => canPick(G, ctx, id) || canAttack(G, ctx, id)[0]))) {
       const cPlayer = ctx.currentPlayer as P_ID
       return { winner: dualPlayerID(cPlayer), loser: cPlayer };
     }
@@ -423,7 +427,7 @@ export function canPick(G: GameState, ctx: Ctx, CId: CellID) {
   //if there is a retreat
   else if (retreatSt !== null) { return CId === retreatSt; }
   else {
-    let obj = G.cells[CId]
+    const obj = G.cells[CId]
     //obj belongs to player, and must be supplied, except relays
     return obj !== null && obj.belong === cPlayer && (obj.supplied || obj.objType === "Relay");
   }

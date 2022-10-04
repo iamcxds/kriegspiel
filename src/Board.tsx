@@ -7,10 +7,9 @@ import { Ctx } from 'boardgame.io';
 import { Console } from 'console';
 import { useGesture } from '@use-gesture/react'
 
-const getWinner = (ctx: Ctx): string | null => {
+const getWinner = (ctx: Ctx) => {
   if (!ctx.gameover) return null;
-  if (ctx.gameover.draw) return 'Draw';
-  return `Player ${ctx.gameover.winner} wins!`;
+  else return spanBGColor( <>The winner is Player {ctx.gameover.winner}!</> ,fictionColor(ctx.gameover.winner));
 };
 
 interface GameProps extends BoardProps<GameState> { }
@@ -190,6 +189,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         )}
         <line x1="0" y1={BoardSize.my / 2} x2={BoardSize.mx} y2={BoardSize.my / 2} stroke={pico8Palette.lavender} stroke-width="0.2" />
         {/* supply line */}
+        
         {getDirSuppliedLines(G, '0')[1].map((lines) => lines.map((lineLst) => {
 
           /*  let stPos = CId2Pos(lineLst[0]);
@@ -294,7 +294,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       </p>
 
       {/* turn info */}
-      <p>{spanBGColor(<>It's {isActive ? "my" : "opponent's"} turn.</>, fictionColor(currentPlayer))}
+      <p>{spanBGColor(<>It is {isActive ? "my" : "opponent's"} turn.</>, fictionColor(currentPlayer))}
         <button disabled={!isActive} onClick={props.undo} >Undo</button>
         <button disabled={!isActive} onClick={() => { events.endTurn && events.endTurn(); }} >End Turn</button>
       </p>
@@ -358,7 +358,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       {battleFactorTable(pickedID)}
 
 
-      <label>{winner && `Winner is ${winner}!`}</label>
+      <p>{winner && winner}</p>
     </div>
   )
   // editor
@@ -428,6 +428,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
         <input type="button" value="Export Game" onClick={() => setGameData(exportGame(G))} />
         <input type="button" value="Load Game" onClick={() => moves.load(gameData)} />
+        <input type="button" value="Merge Game" onClick={() => moves.merge(gameData)} />
         <input type="button" value="Copy Data" onClick={() => {
           // Get the text field
           const copyText = document.getElementById("gameData") as HTMLInputElement;
@@ -444,7 +445,6 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   // render all
   return (
     <main >
-      <h1>Guy Debord's Kriegspiel</h1>
       <div style={{ height: "auto", fontFamily: "'Lato', sans-serif", clear: "both", display: "flex" }}>
 
         <div style={{
