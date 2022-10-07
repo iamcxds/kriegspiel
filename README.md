@@ -47,7 +47,9 @@ You can also refer to the more detailed [rules](http://r-s-g.org/kriegspiel/rule
 
 ![screenshot](resource/opening.png)
 
-This game is a simulation of the battle in the Napoleonic Wars. Two armies with a limited amount of units fight on a 25⨉20 board. Each player can move up 5 units and attack 1 enemy per turn. The 🐴speed affects the unit's movement range in one turn.
+This game is a simulation of the battle in the Napoleonic Wars. Two armies with a limited amount of units fight on a 25⨉20 board. The game ends by occupying(thus destroying) the enemy's all 🎪Arsenals.
+
+Each player can move up 5 units and attack 1 enemy per turn. The 🐴speed affects the unit's movement range in one turn.
 
 ![move](resource/move.png)
 
