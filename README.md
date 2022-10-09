@@ -117,5 +117,5 @@ Current developing screenshot:
 - Will enemy units block fire lines? i.e. can I attack back-line units? (no, yes)
 - Will offline enemy units block communication lines? will the retreating unit do? (no, yes)
 - Is failed retreat count as a move? (no)
-- Can un-supplied units retreat? (yes)
+- Can un-supplied units retreat? (no)
   
