@@ -577,7 +577,6 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             setEditFiction(dualPlayerID(editFiction));
           }}
         />
-        <input type="button" value="Undo" onClick={props.undo} />
         <input type="button" value="Reset Board" onClick={() => moves.load(Game.onlyMap)} />
       </div>
       {/* Game Data */}
@@ -644,7 +643,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           <div
             style={{
               maxHeight: '100vh',
-              minWidth: '50vw',
+              minWidth: '55vw',
               flex: '4',
               maxWidth: '122vh',
 
