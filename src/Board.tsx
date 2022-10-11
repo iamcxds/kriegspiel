@@ -515,6 +515,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       </p>
 
       {/* battle factor */}
+      <label>Total Combat Factors:</label>
       {battleFactorTable(pickedID)}
       <p>{getWinner()}</p>
     </div>
