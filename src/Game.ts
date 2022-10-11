@@ -416,7 +416,7 @@ function connectedComponents(set: CellID[], pts: CellID[]): CellID[] {
   do {
     //new pts are not in old, and distance is less than 1
     newSet = set.filter(
-      (CId) => !oldSet.includes(CId) && /* largerSet(oldSet).includes(CId) */ ptSetDisLessThan(oldSet, CId),
+      (CId) => !oldSet.includes(CId) && ptSetDisLessThan(oldSet, CId),
     );
     oldSet = oldSet.concat(newSet);
   } while (newSet.length > 0);
@@ -589,13 +589,7 @@ export function getBattleFactor(G: GameState, player: P_ID, isOffense: boolean, 
       !(isOffense && (obj.retreating || obj.offense === 0))
     );
   });
-  /* filterCId(G.cells,(obj,id)=>
-  //obj is in range, supplied, belongs to the chosen player,
-  (isInRange(pos,CId2Pos(id),obj)&&obj.supplied&&obj.belong===player)
-  //filter out retreating units in offense
-  &&!(isOffense&&obj.retreating)
-  ) */
-
+  
   //filter the effecting strongholds
   const effectingStronghold = effectingObjs
     .map((id) => {

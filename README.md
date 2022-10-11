@@ -1,6 +1,6 @@
 # Le Jeu de la Guerre
 
-Try it on the [GitHub page](https://iamcxds.github.io/kriegspiel).
+Try it on the [GitHub page](https://iamcxds.github.io/kriegspiel) for local mode. Play online multiplayer mode on [FreeBoardGames](https://www.freeboardgames.org/en/play/kriegspiel)
 
 A WEB implementation of Guy Debord's A Game of War ([Le Jeu de la Guerre](https://www.wikiwand.com/fr/Le_Jeu_de_la_guerre_(livre))). Powered by [boardgame.io](https://boardgame.io/). The graphic is based on svg+emoji, with [Pico8's Palette](https://pico-8.fandom.com/wiki/Palette).
 
@@ -49,7 +49,7 @@ You can also refer to the more detailed [rules](http://r-s-g.org/kriegspiel/rule
 
 This game is a simulation of the battle in the Napoleonic Wars. Two armies with a limited amount of units fight on a 25⨉20 board. The game ends by occupying(thus destroying) the enemy's all 🎪Arsenals.
 
-Each player can move up 5 units and attack 1 enemy per turn. The 🐴speed affects the unit's movement range in one turn.
+Each player can move up to 5 units and attack 1 enemy per turn. The 🐴speed affects the unit's movement range in one turn.
 
 ![move](resource/move.png)
 
@@ -117,5 +117,5 @@ Current developing screenshot:
 - Will enemy units block fire lines? i.e. can I attack back-line units? (no, yes)
 - Will offline enemy units block communication lines? will the retreating unit do? (no, yes)
 - Is failed retreat count as a move? (no)
-- Can un-supplied units retreat? (no)
+- Can offline units retreat? (no)
   
