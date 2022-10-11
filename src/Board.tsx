@@ -23,7 +23,7 @@ import {
 
 import { useGesture } from '@use-gesture/react'
 
-interface GameProps extends BoardProps<GameState> {}
+interface GameProps extends BoardProps<GameState> { }
 
 
 export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) => {
@@ -31,7 +31,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const opponentID = dualPlayerID(myID);
   const currentPlayer = ctx.currentPlayer as P_ID;
   const [pickedID, pickUpID] = useState<CellID | null>(null);
-  const editMode= ctx.activePlayers?.[myID]==='edition';
+  const editMode = ctx.activePlayers?.[myID] === 'edition';
 
   function pickedData(pId: CellID | null) {
     if (pId !== null && canPick(G, ctx, pId) && isActive) {
@@ -62,8 +62,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
           break;
         case id:
-          if (canAttack(G,ctx,id)[0])
-          {moves.attack(id)}
+          if (canAttack(G, ctx, id)[0]) { moves.attack(id) }
           pickUpID(null);
           break;
         default:
@@ -160,9 +159,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   //map move ui
   const [mapPos, setMapPos] = useState<Game.Position>({ x: 0, y: 0 })
   const [mapScale, setMapScale] = useState<number>(1)
-  
-  
-  
+
+
+
   const gestureBind = useGesture(
     {
       onDrag: (state) => {
@@ -177,18 +176,18 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         }
       },
       onWheel: (state) => {
-        const evt =state.event;
+        const evt = state.event;
         evt.preventDefault();
         const spd = 0.0007
-        
+
         const newScale = mapScale * (1 - spd * state.movement[1])
-        
+
         setMapScale(newScale);
       },
       onPinch: (state) => {
 
         const newScale = state.offset[0]
-        
+
 
         setMapScale(newScale);
       },
@@ -206,7 +205,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   const gameBoard = (
     <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`} ref={boardRef}>
       <g
-      transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${mapPos.x - BoardSize.mx / 2} ${mapPos.y - BoardSize.my / 2})`}
+        transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${mapPos.x - BoardSize.mx / 2} ${mapPos.y - BoardSize.my / 2})`}
       >
         <rect
           x={-0.6}
@@ -538,7 +537,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     }
   }
 
-  function editorCells(id:number,render:string){
+  function editorCells(id: number, render: string) {
     return (
       <g
         cursor="pointer"
@@ -565,9 +564,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       {/* Editor */}
       <div>
         <svg viewBox="-0.1 -0.2 6.2 2.2">
-          {renderLayer((type, id) =>  editorCells(id,Game.objDataList[type].objRender), objTypeList)}
+          {renderLayer((type, id) => editorCells(id, Game.objDataList[type].objRender), objTypeList)}
           {gTranslate(
-            renderLayer((type, oid) =>  editorCells(oid+6,Game.renderPlaceByType(type)[0]), strongholdTypeList),
+            renderLayer((type, oid) => editorCells(oid + 6, Game.renderPlaceByType(type)[0]), strongholdTypeList),
             0, 1,)}
         </svg>
         <input
@@ -582,6 +581,11 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       {/* Game Data */}
       <form>
         <label>GameData:</label>
+        <select onChange={(e) => setGameData(e.target.value)}>
+          {Game.gameList.map((option) => (<option value={option.data}>
+            {option.name}
+          </option>))}
+        </select>
         <textarea
           name="gameData"
           id="gameData"
@@ -627,67 +631,67 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   // render all
 
-  
-    return (
-      <main>
+
+  return (
+    <main>
+      <div
+        style={{
+          height: 'auto',
+          color: 'black',
+          fontFamily: "'Lato', sans-serif",
+          display: 'flex',
+          flexWrap: 'wrap',
+          //alignItems: 'center',
+        }}
+      >
         <div
           style={{
-            height: 'auto',
-            color: 'black',
-            fontFamily: "'Lato', sans-serif",
-            display: 'flex',
-            flexWrap: 'wrap',
-            //alignItems: 'center',
+            maxHeight: '100vh',
+            minWidth: '55vw',
+            flex: '4',
+            maxWidth: '122vh',
+
+            border: `2px solid ${pico8Palette.dark_green}`,
+            backgroundColor: `${pico8Palette.white}`,
+            touchAction: 'none',
           }}
         >
-          <div
-            style={{
-              maxHeight: '100vh',
-              minWidth: '55vw',
-              flex: '4',
-              maxWidth: '122vh',
-
-              border: `2px solid ${pico8Palette.dark_green}`,
-              backgroundColor: `${pico8Palette.white}`,
-              touchAction: 'none',
-            }}
-          >
-            {/* svg Game Board */}
-            {gameBoard}
-          </div>
-
-          {/* info UI */}
-          <div
-            style={{
-              minWidth: '250px',
-              flex: '1',
-              maxWidth: '100vw',
-              
-              border: `2px solid ${pico8Palette.dark_green}`,
-              backgroundColor: `${pico8Palette.white}`,
-            }}
-          >
-            {editMode ? sideBarEdit : sideBarPlay}
-
-            <p>
-              More information <a href="https://github.com/iamcxds/kriegspiel">here</a>.{' '}
-              <input
-                type="button"
-                value="Edit Mode"
-                onClick={() => {
-                  if (!editMode) {
-                    events.setStage&&events.setStage('edition');
-                  } else {
-                    events.endStage&&events.endStage();
-                  }
-                }}
-              />
-            </p>
-          </div>
+          {/* svg Game Board */}
+          {gameBoard}
         </div>
-      </main>
-    );
-  
+
+        {/* info UI */}
+        <div
+          style={{
+            minWidth: '250px',
+            flex: '1',
+            maxWidth: '100vw',
+
+            border: `2px solid ${pico8Palette.dark_green}`,
+            backgroundColor: `${pico8Palette.white}`,
+          }}
+        >
+          {editMode ? sideBarEdit : sideBarPlay}
+
+          <p>
+            More information <a href="https://github.com/iamcxds/kriegspiel">here</a>.{' '}
+            <input
+              type="button"
+              value="Edit Mode"
+              onClick={() => {
+                if (!editMode) {
+                  events.setStage && events.setStage('edition');
+                } else {
+                  events.endStage && events.endStage();
+                }
+              }}
+            />
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+
 };
 
 function renderLayer<T>(
