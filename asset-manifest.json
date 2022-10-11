@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/kriegspiel/static/css/main.e6c13ad2.css",
-    "main.js": "/kriegspiel/static/js/main.baaa3b45.js",
+    "main.js": "/kriegspiel/static/js/main.b7cfb4e0.js",
     "static/js/787.5eb4d295.chunk.js": "/kriegspiel/static/js/787.5eb4d295.chunk.js",
     "index.html": "/kriegspiel/index.html",
     "main.e6c13ad2.css.map": "/kriegspiel/static/css/main.e6c13ad2.css.map",
-    "main.baaa3b45.js.map": "/kriegspiel/static/js/main.baaa3b45.js.map",
+    "main.b7cfb4e0.js.map": "/kriegspiel/static/js/main.b7cfb4e0.js.map",
     "787.5eb4d295.chunk.js.map": "/kriegspiel/static/js/787.5eb4d295.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.baaa3b45.js"
+    "static/js/main.b7cfb4e0.js"
   ]
 }
