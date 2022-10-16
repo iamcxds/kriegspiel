@@ -700,7 +700,7 @@ export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
 //Game Object
 
 //type Entity = number
-type ObjType = 'Infantry' | 'Cavalry' | 'Artillery' | 'Swift_Artillery' | 'Relay' | 'Swift_Relay';
+export type ObjType = 'Infantry' | 'Cavalry' | 'Artillery' | 'Swift_Artillery' | 'Relay' | 'Swift_Relay';
 
 export const objTypeList: readonly ObjType[] = [
   'Infantry',
@@ -804,9 +804,9 @@ export function newPiece(type: ObjType, be: P_ID): ObjInstance {
   };
 }
 
-type StrongholdType = 'Arsenal' | 'Pass' | 'Fortress' | 'Mountain';
+export type StrongholdType = 'Arsenal' | 'Pass' | 'Fortress' | 'Mountain';
 export const strongholdTypeList: readonly StrongholdType[] = ['Arsenal', 'Fortress', 'Pass', 'Mountain'];
-interface Stronghold {
+export interface Stronghold {
   readonly placeType: StrongholdType;
   readonly defenseAdd: number;
   readonly placeRender: string;
