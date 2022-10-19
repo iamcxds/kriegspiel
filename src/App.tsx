@@ -2,9 +2,7 @@ import { Client } from 'boardgame.io/react';
 import { Kriegspiel } from './Game';
 import { Local } from 'boardgame.io/multiplayer';
 import { Board }  from './Board';
-import { DebugOpt } from 'boardgame.io/dist/types/src/client/client';
 import {RandomBot} from 'boardgame.io/ai';
-import { SocketIO } from 'boardgame.io/multiplayer'
 
 const KriegspielClient = Client({
   game: Kriegspiel,
