@@ -215,7 +215,6 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     {
       target: boardRef,
       eventOptions: { passive: false },
-      preventDefault: true,
     },
   );
 
@@ -426,15 +425,13 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         <button
           disabled={!isActive}
           onClick={() => {
-            let text = 'End Turn?';
-            if (window.confirm(text)) {
-              events.endTurn && events.endTurn();
-            }
+              events.endTurn && events.endTurn();            
           }}
         >
           End Turn
         </button>
       </p>
+      <p>{getWinner()}</p>
 
       {/* action info */}
       <label>My Moves and Attack:</label>
@@ -649,7 +646,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       return null;
     }
   }
-  const winner = getWinner();
+  //const winner = getWinner();
 
   // render all
 

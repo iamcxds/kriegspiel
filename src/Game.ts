@@ -26,12 +26,12 @@ export const aiConfig = {
   enumerate: (G: GameState, ctx: Ctx) => {
     let evts = [{ event: 'endTurn', args: [] }];
     const CIdLst = Array.from(Array(BoardSize.mx * BoardSize.my).keys());
-    const cPlayer = ctx.currentPlayer as P_ID;
     let atks = CIdLst.filter((id) => canAttack(G, ctx, id)[0]).map((id) => {
       return { move: 'attack', args: [id] };
     });
     let moves = CIdLst.filter((stCId) => canPick(G, ctx, stCId)).flatMap((stCId) => {
       //simply predict supply line after move
+      const cPlayer = ctx.currentPlayer as P_ID;
       const newG: GameState = { ...G, cells: G.cells.map((obj, CId) => (CId === stCId ? null : obj)) };
       const suppPred = getSuppliedCells(newG, cPlayer);
       const dirSuppPred = getDirSuppliedLines(newG, cPlayer)[0];
@@ -52,6 +52,60 @@ export const aiConfig = {
     }
     return result;
   },
+  playoutDepth: 5,
+  iterations: 10,
+  objectScores: (G: GameState, ctx: Ctx, playerID:string) => {
+    const cPlayer = playerID as P_ID
+    /* if (G.moveRecords[cPlayer].length >= 5) {
+      console.log('noMoreChoose')
+      return { noMoreChoose: { weight: 1, checker: () => true } }
+    } */
+
+    console.log('check objectives')
+    const opPlayer = dualPlayerID(cPlayer)
+    const cControlArea = totalControlArea(G, cPlayer)
+    const dirSuppliedNum = getDirSuppliedLines(G, cPlayer)[0].length
+    const cStronghold = totalStrongHold(G, cPlayer)
+    const opStronghold = totalStrongHold(G, opPlayer)
+    const cRelDef = totalRelDef(G, cPlayer)
+    const opRelDef = totalRelDef(G, opPlayer)
+    return {
+      /* stillInSupply: {
+        weight: 100,
+        checker: (G: any, ctx: Ctx) => { return !checkNoSupply(G, ctx.currentPlayer as P_ID) }
+      }, */
+      moreControlArea: {
+        weight: 10,
+        checker: (G: any, ctx: Ctx) => {
+          console.log("? more area than" + cControlArea)
+          return totalControlArea(G, cPlayer) - cControlArea
+        }
+      },
+      moreDirSupply: {
+        weight: 50,
+        checker: (G: any, ctx: Ctx) => { return getDirSuppliedLines(G, cPlayer)[0].length - dirSuppliedNum }
+      },
+      moreMyStronghold: {
+        weight: 20,
+        checker: (G: any, ctx: Ctx) => { return totalStrongHold(G, cPlayer) - cStronghold }
+      },
+      moreMyDef: {
+        weight: 50,
+        checker: (G: any, ctx: Ctx) => { return totalRelDef(G, cPlayer) - cRelDef }
+      },
+      lessOpStronghold: {
+        weight: 50,
+        checker: (G: any, ctx: Ctx) => { return opStronghold-totalStrongHold(G, opPlayer) }
+      },
+      lessOpDef: {
+        weight: 40,
+        checker: (G: any, ctx: Ctx) => { return opRelDef-totalRelDef(G, opPlayer)  }
+      },
+
+    }
+  }
+
+
 };
 
 export const Kriegspiel: Game<GameState> = {
@@ -165,6 +219,49 @@ export const Kriegspiel: Game<GameState> = {
 
   ai: aiConfig,
 };
+
+//ai help functions
+function totalStrongHold(G: GameState, pId: P_ID) {
+  //total strongHold with weight
+  // 'Arsenal' | 'Fortress'| 'Pass' | 'Mountain';
+  return G.places.filter((str) => str && str.belong === pId).reduce((sum, str) => {
+    let add = 0
+    switch (str?.placeType) {
+      case 'Arsenal': add = 20; break;
+      case 'Fortress': add = 4; break;
+      case 'Pass': add = 2; break;
+    }
+    return sum + add
+  }, 0)
+}
+
+function totalControlArea(G: GameState, pId: P_ID) {
+  return G.controlArea.filter((area) => area.control === pId).length
+}
+
+function checkNoSupply(G: GameState, pId: P_ID) {
+  return G.cells.some((obj) => obj && obj.belong === pId && !obj.supplied && obj.objType !== 'Relay')
+}
+
+function totalRelDef(G: GameState, pId: P_ID) {
+  //total RelDef of all pieces, with weight 
+  //'Infantry' | 'Cavalry' | 'Artillery' | 'Swift_Artillery' | 'Relay' | 'Swift_Relay';
+  return filterCId(G.cells, (obj) => obj && obj.belong === pId).reduce((sum, CId) => {
+    let w = 1
+    const relDef = G.controlArea[CId][pId]
+    const obj = G.cells[CId]
+    switch (obj?.typeName) {
+      case 'Infantry': w = 1; break;
+      case 'Cavalry': w = 2; break;
+      case 'Artillery': w = 1.5; break;
+      case 'Swift_Artillery': w = 1.8; break;
+      case 'Relay': w = 1.2; break;
+      case 'Swift_Relay': w = 1.5; break;
+    }
+    return sum + w * relDef
+  }, 0)
+}
+
 
 //data save and load board use FEN
 //date like "💂‍♂️.0/🎪.0|8|"
@@ -495,9 +592,9 @@ function moveRange(G: GameState, stCId: CellID, speed: number = 1): CellID[] {
     result = G.cells
       .map((obj, id) =>
         NaiveDistance(CId2Pos(stCId), CId2Pos(id)) <= speed &&
-        obj === null &&
-        G.places[id]?.placeType !== 'Mountain' &&
-        ptSetDisLessThan(result, id)
+          obj === null &&
+          G.places[id]?.placeType !== 'Mountain' &&
+          ptSetDisLessThan(result, id)
           ? id
           : null,
       )
@@ -807,7 +904,7 @@ export function newPiece(type: ObjType, be: P_ID): ObjInstance {
   };
 }
 
-type StrongholdType = 'Arsenal' | 'Pass' | 'Fortress' | 'Mountain';
+type StrongholdType = 'Arsenal' | 'Fortress' | 'Pass' | 'Mountain';
 export const strongholdTypeList: readonly StrongholdType[] = ['Arsenal', 'Fortress', 'Pass', 'Mountain'];
 interface Stronghold {
   readonly placeType: StrongholdType;
@@ -826,7 +923,7 @@ export function newStronghold(type: StrongholdType, belong: P_ID | null = null):
 }
 export function renderPlaceByType(t: StrongholdType): [string, number] {
   switch (
-    t //render and def Add
+  t //render and def Add
   ) {
     case 'Arsenal':
       return ['🎪', 0];
