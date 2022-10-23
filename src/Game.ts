@@ -30,14 +30,9 @@ export const aiConfig = {
       return { move: 'attack', args: [id] };
     });
     let moves = CIdLst.filter((stCId) => canPick(G, ctx, stCId)).flatMap((stCId) => {
-      //simply predict supply line after move
-      const cPlayer = ctx.currentPlayer as P_ID;
-      const newG: GameState = { ...G, cells: G.cells.map((obj, CId) => (CId === stCId ? null : obj)) };
-      const suppPred = getSuppliedCells(newG, cPlayer);
-      const dirSuppPred = getDirSuppliedLines(newG, cPlayer)[0];
-      //move to dir supplied or close friendly units.
+      const suppPred = supplyPrediction(G, ctx, stCId)
       return CIdLst.filter(
-        (edCId) => canPut(G, ctx, stCId, edCId) && (dirSuppPred.includes(edCId) || ptSetDisLessThan(suppPred, edCId)),
+        (edCId) => canPut(G, ctx, stCId, edCId) && (G.cells[stCId]?.objType === 'Relay' || suppPred(edCId)),
       ).map((edCId) => {
         return { move: 'movePiece', args: [stCId, edCId] };
       });
@@ -53,53 +48,55 @@ export const aiConfig = {
     return result;
   },
   playoutDepth: 5,
-  iterations: 10,
-  objectScores: (G: GameState, ctx: Ctx, playerID:string) => {
+  iterations: 50,
+  objectScores: (G:GameState,ctx:Ctx,playerID: string) => {
     const cPlayer = playerID as P_ID
-    /* if (G.moveRecords[cPlayer].length >= 5) {
-      console.log('noMoreChoose')
-      return { noMoreChoose: { weight: 1, checker: () => true } }
-    } */
-
-    console.log('check objectives')
     const opPlayer = dualPlayerID(cPlayer)
-    const cControlArea = totalControlArea(G, cPlayer)
+    console.log('check objectives')
+    /* const cControlArea = totalControlArea(G, cPlayer)
     const dirSuppliedNum = getDirSuppliedLines(G, cPlayer)[0].length
     const cStronghold = totalStrongHold(G, cPlayer)
     const opStronghold = totalStrongHold(G, opPlayer)
     const cRelDef = totalRelDef(G, cPlayer)
-    const opRelDef = totalRelDef(G, opPlayer)
+    const opRelDef = totalRelDef(G, opPlayer) */
+    /* return (G: any, ctx: Ctx) => {
+      const ControlArea=totalControlArea(G, cPlayer) - 250
+      const DirSupply=getDirSuppliedLines(G, cPlayer)[0].length
+      const MyStronghold=totalStrongHold(G, cPlayer)
+      const MyDef=totalRelDef(G, cPlayer)
+      const OpStronghold= totalStrongHold(G, opPlayer)
+      const OpDef=totalRelDef(G, opPlayer)
+      
+      return ControlArea*10+DirSupply+MyStronghold*3+MyDef*5-OpStronghold*2-OpDef*3
+    } */
+    
     return {
-      /* stillInSupply: {
-        weight: 100,
-        checker: (G: any, ctx: Ctx) => { return !checkNoSupply(G, ctx.currentPlayer as P_ID) }
-      }, */
+
       moreControlArea: {
-        weight: 10,
+        weight: 20,
         checker: (G: any, ctx: Ctx) => {
-          console.log("? more area than" + cControlArea)
-          return totalControlArea(G, cPlayer) - cControlArea
+          return totalControlArea(G, cPlayer) - 250
         }
       },
       moreDirSupply: {
-        weight: 50,
-        checker: (G: any, ctx: Ctx) => { return getDirSuppliedLines(G, cPlayer)[0].length - dirSuppliedNum }
+        weight: 1,
+        checker: (G: any, ctx: Ctx) => { return getDirSuppliedLines(G, cPlayer)[0].length }
       },
       moreMyStronghold: {
-        weight: 20,
-        checker: (G: any, ctx: Ctx) => { return totalStrongHold(G, cPlayer) - cStronghold }
+        weight: 10,
+        checker: (G: any, ctx: Ctx) => { return totalStrongHold(G, cPlayer) }
       },
       moreMyDef: {
-        weight: 50,
-        checker: (G: any, ctx: Ctx) => { return totalRelDef(G, cPlayer) - cRelDef }
+        weight: 7,
+        checker: (G: any, ctx: Ctx) => { return totalRelDef(G, cPlayer) }
       },
       lessOpStronghold: {
-        weight: 50,
-        checker: (G: any, ctx: Ctx) => { return opStronghold-totalStrongHold(G, opPlayer) }
+        weight: 5,
+        checker: (G: any, ctx: Ctx) => { return -totalStrongHold(G, opPlayer) }
       },
       lessOpDef: {
-        weight: 40,
-        checker: (G: any, ctx: Ctx) => { return opRelDef-totalRelDef(G, opPlayer)  }
+        weight: 15,
+        checker: (G: any, ctx: Ctx) => { return -totalRelDef(G, opPlayer) }
       },
 
     }
@@ -236,12 +233,13 @@ function totalStrongHold(G: GameState, pId: P_ID) {
 }
 
 function totalControlArea(G: GameState, pId: P_ID) {
-  return G.controlArea.filter((area) => area.control === pId).length
+  return G.controlArea.filter((area) => area.control === pId).reduce((sum,area)=>{
+    let score=1
+    if (area[pId]>0){score=2}
+    return sum+score
+  },0)
 }
 
-function checkNoSupply(G: GameState, pId: P_ID) {
-  return G.cells.some((obj) => obj && obj.belong === pId && !obj.supplied && obj.objType !== 'Relay')
-}
 
 function totalRelDef(G: GameState, pId: P_ID) {
   //total RelDef of all pieces, with weight 
@@ -799,7 +797,15 @@ export function getSuppliedCells(G: GameState, player: P_ID): CellID[] {
   const mySuppliedPieces = connectedComponents(myPieceLst, myPieceDirSupplied);
   return mySuppliedPieces;
 }
-
+export function supplyPrediction(G: GameState, ctx: Ctx, stCId: CellID) {
+  //simply predict supply line after move
+  const cPlayer = ctx.currentPlayer as P_ID;
+  const newG: GameState = { ...G, cells: G.cells.map((obj, CId) => (CId === stCId ? null : obj)) };
+  const suppPred = getSuppliedCells(newG, cPlayer);
+  const dirSuppPred = getDirSuppliedLines(newG, cPlayer)[0];
+  //wether move to dir supplied or close friendly units.
+  return (edCId: CellID) => (dirSuppPred.includes(edCId) || ptSetDisLessThan(suppPred, edCId))
+}
 //Game Object
 
 type ObjType = 'Infantry' | 'Cavalry' | 'Artillery' | 'Swift_Artillery' | 'Relay' | 'Swift_Relay';

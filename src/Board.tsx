@@ -90,17 +90,10 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     const strongholdColor = G.places[id]?.belong;
     if (id === pickedID) {
       return pico8Palette.dark_purple;
-    } else if (isAvailable(id)) {
+    } else if (pickedID !== null&&isAvailable(id)) {
       //predict supply after moving
-      if (
-        getSuppliedCells(
-          {
-            ...G,
-            cells: G.cells.map((obj, CId) => (CId === pickedID ? null : CId === id ? pickedData(pickedID) : obj)),
-          },
-          currentPlayer,
-        ).includes(id)
-      ) {
+      const suppPred=Game.supplyPrediction(G,ctx,pickedID)
+      if (suppPred(id)) {
         return pico8Palette.green;
       } else {
         return pico8Palette.yellow;
@@ -221,7 +214,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   //render Main board
 
   const gameBoard = (
-    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`} ref={boardRef}>
+    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}>
       <g
         transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${
           mapPos.x - BoardSize.mx / 2
@@ -361,6 +354,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
     return (
       <table style={{ marginLeft: 'auto', marginRight: 'auto' }}>
+        <tbody>
         {obj?.belong !== opponentID ? (
           // if choose my unit or empty place
           <tr>
@@ -375,6 +369,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             {eDefTd}
           </tr>
         ) : null}
+        </tbody>
       </table>
     );
   }
@@ -404,7 +399,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       {/* how many units left */}
 
       <p>
-        <label>Over All:</label>
+        <label>Turn {ctx.turn} Over All:</label>
 
         <div
           onClick={() => {
@@ -664,6 +659,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           }}
         >
           <div
+            ref={boardRef}
             style={{
               maxHeight: '100vh',
               minWidth: '55vw',
