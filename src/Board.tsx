@@ -65,7 +65,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
           break;
         case id:
-          if (canAttack(G, ctx, id)[0]) {
+          if (canAttack(G, ctx, id)[0]&&isActive) {
             moves.attack(id);
           }
           pickUpID(null);
