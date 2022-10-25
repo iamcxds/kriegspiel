@@ -39,7 +39,7 @@ export const aiConfig = {
     });
     let result = [];
     if (moves.length > 0) {
-      result = moves;
+      result = [...moves,...atks,...evts];
     } else if (atks.length > 0) {
       result = atks;
     } else {
@@ -54,73 +54,68 @@ export const aiConfig = {
     const opPlayer = dualPlayerID(cPlayer)
     const myArea=filterCId(G.cells, (obj) => obj && obj.belong === playerID)
     const enemyArea=filterCId(G.cells, (obj) => obj && obj.belong !== playerID)
-    const myControl=filterCId(G.controlArea, (area) => area.control === playerID)
-    const enemyControl=filterCId(G.controlArea, (area) => area.control !== playerID)
+    const myFrontDisLst=G.cells.map((_,CId)=>{
+      let frontDist=ptSetDistance(enemyArea,CId)
+      if (frontDist<=6){frontDist=ptSetPathDistance(G,enemyArea,CId)}
+      return frontDist
+    })
+    const opFrontDisLst=G.cells.map((_,CId)=>{
+      let frontDist=ptSetDistance(myArea,CId)
+      if (frontDist<=6){frontDist=ptSetPathDistance(G,myArea,CId)}
+      return frontDist
+    })
+    
     console.log('check objectives')
-    /* const cControlArea = totalControlArea(G, cPlayer)
-    const dirSuppliedNum = getDirSuppliedLines(G, cPlayer)[0].length
-    const cStronghold = totalStrongHold(G, cPlayer)
-    const opStronghold = totalStrongHold(G, opPlayer)
-    const cRelDef = totalRelDef(G, cPlayer)
-    const opRelDef = totalRelDef(G, opPlayer) */
-    /* return (G: any, ctx: Ctx) => {
-      const ControlArea=totalControlArea(G, cPlayer) - 250
-      const DirSupply=getDirSuppliedLines(G, cPlayer)[0].length
-      const MyStronghold=totalStrongHold(G, cPlayer)
-      const MyDef=totalRelDef(G, cPlayer)
-      const OpStronghold= totalStrongHold(G, opPlayer)
-      const OpDef=totalRelDef(G, opPlayer)
-      
-      return ControlArea*10+DirSupply+MyStronghold*3+MyDef*5-OpStronghold*2-OpDef*3
-    } */
+    
     
     return {
 
       noUnsupply:{
         weight:1000,
         checker: (G: GameState, ctx: Ctx) => {
-          const unSupply=G.cells.filter((obj)=>obj&&obj.belong===cPlayer&&obj.objType!=='Relay').some((obj)=>!(obj?.supplied))
-          return unSupply?-1:0
+          const unSupplyNum=G.cells.filter((obj)=>obj&&obj.belong===cPlayer&&obj.objType!=='Relay'&&!obj.supplied).length
+          return -unSupplyNum
         }
       },
 
       moreMyControlArea: {
         weight: 5,
         checker: (G: GameState, ctx: Ctx) => {
-          return totalControlArea(G, cPlayer,enemyArea) - 250
+          return totalControlArea(G, cPlayer,(id)=>myFrontDisLst[id]) - 250
         }
       },
       lessOpControlArea: {
         weight: 5,
         checker: (G: GameState, ctx: Ctx) => {
-          return totalControlArea(G, opPlayer,myArea) - 250
+          return totalControlArea(G, opPlayer,(id)=>opFrontDisLst[id]) - 250
         }
       },
       moreDirSupply: {
-        weight: 1,
+        weight: 10,
         checker: (G: GameState, ctx: Ctx) => { 
           return getDirSuppliedLines(G, cPlayer)[0].reduce((sum,CId)=>{
             //check if is front line
-            const value=ptSetDisLessThan(enemyArea,CId,5)?5:1
+            const relDef=G.controlArea[CId][cPlayer]
+            const value=myFrontDisLst[CId]<=5?relDef:1
             return sum+value
           }
         ,0) }
       },
       moreMyStronghold: {
-        weight: 100,
-        checker: (G: GameState, ctx: Ctx) => { return totalStrongHold(G, cPlayer,enemyArea) }
+        weight: 500,
+        checker: (G: GameState, ctx: Ctx) => { return totalStrongHold(G, cPlayer,(id)=>myFrontDisLst[id]) }
       },
       moreMyDef: {
-        weight: 10,
-        checker: (G: GameState, ctx: Ctx) => { return totalRelDef(G, cPlayer,enemyArea,enemyControl) }
+        weight: 7,
+        checker: (G: GameState, ctx: Ctx) => { return totalRelDef(G, cPlayer,(id)=>myFrontDisLst[id]) }
       },
       lessOpStronghold: {
-        weight: 100,
-        checker: (G: GameState, ctx: Ctx) => { return -totalStrongHold(G, opPlayer,myArea) }
+        weight: 200,
+        checker: (G: GameState, ctx: Ctx) => { return -totalStrongHold(G, opPlayer,(id)=>opFrontDisLst[id]) }
       },
       lessOpDef: {
-        weight: 15,
-        checker: (G: GameState, ctx: Ctx) => { return -totalRelDef(G, opPlayer,myArea,myControl) }
+        weight: 38,
+        checker: (G: GameState, ctx: Ctx) => { return -totalRelDef(G, opPlayer,(id)=>opFrontDisLst[id]) }
       },
 
     }
@@ -242,7 +237,7 @@ export const Kriegspiel: Game<GameState> = {
 };
 
 //ai help functions
-function totalStrongHold(G: GameState, pId: P_ID,enemyArea:CellID[]) {
+function totalStrongHold(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number) {
   //total strongHold with weight
   // 'Arsenal' | 'Fortress'| 'Pass' | 'Mountain';
   return filterCId(G.places,((str,CId) => str&&G.controlArea[CId].control===pId )).reduce((sum, CId) => {
@@ -250,68 +245,80 @@ function totalStrongHold(G: GameState, pId: P_ID,enemyArea:CellID[]) {
     const relDef=G.controlArea[CId][pId]
     let add = 0
     let factor=0
-    if (ptSetDisLessThan(enemyArea,CId,5)){factor=1}
-    switch (str?.placeType) {
-      case 'Arsenal': add += 100; break;
-      case 'Fortress': add += relDef*factor; break;
-      case 'Pass': add += relDef*factor; break;
-    }
+    if (frontDistFun(CId)<=5){factor=1}
+    
     if(str?.belong===pId){
       switch (str?.placeType) {
+        case 'Arsenal': add += 1000; break;
+        case 'Fortress': add += 40*factor; break;
+        case 'Pass': add += 20*factor; break;
+      }
+    }
+    else{
+      switch (str?.placeType) {
         case 'Arsenal': add += 100; break;
-        //case 'Fortress': add += 10*factor; break;
-        //case 'Pass': add += 5*factor; break;
+        case 'Fortress': add += Math.min(40,relDef)*factor; break;
+        case 'Pass': add += Math.min(20,relDef)*factor; break;
       }
     }
     return sum + add
   }, 0)
 }
 
-function totalControlArea(G: GameState, pId: P_ID,enemyArea:CellID[]) {
+function totalControlArea(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number) {
   return filterCId(G.controlArea,((area) => area.control === pId)).reduce((sum,CId)=>{
     const area=G.controlArea[CId]
     
     let score=1
     //front line score=relDef
-    if (ptSetDisLessThan(enemyArea,CId,5)){score=area[pId]}
+    if (frontDistFun(CId)<=5){score=area[pId]}
     return sum+score
   },0)
 }
 
 
-function totalRelDef(G: GameState, pId: P_ID,enemyArea:CellID[],enemyControl:CellID[]) {
+function totalRelDef(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number) {
+  
+  let minFrontRelDef:number|undefined=undefined
   //total RelDef of all pieces, with weight 
   //'Infantry' | 'Cavalry' | 'Artillery' | 'Swift_Artillery' | 'Relay' | 'Swift_Relay';
-  return filterCId(G.cells, (obj) => obj && obj.belong === pId).reduce((sum, CId) => {
+  const totalSum=filterCId(G.cells, (obj) => obj && obj.belong === pId).reduce((sum, CId) => {
     const obj = G.cells[CId]
     const isRelay=obj?.objType==='Relay'
     let w = 1
     let relDef = 1 
+    let addDef = 0
+    const stronghold=G.places[CId]
+    if (stronghold&&(stronghold.placeType==='Fortress'||stronghold.placeType==='Pass')){
+      addDef=20
+    }
     //RelDef be 1 at backline, and its weight decrease according to the distance to frontline
-    const frontDist=ptSetDistance(enemyArea,CId)
-    let factor=5-frontDist
-    const oRelDef=G.controlArea[CId][pId]
+    const frontDist= frontDistFun(CId)
+    const oRelDef=G.controlArea[CId][pId]+addDef
+    const factor=5-frontDist
+    //get minimal RelDef in frontLine
+    if(frontDist<=3&&(!minFrontRelDef||oRelDef<minFrontRelDef)){minFrontRelDef=oRelDef}
     //back line
     if (frontDist>5){relDef=isRelay?1:factor}
     //if is in danger
-    else if (oRelDef<0){relDef=100*oRelDef}
-    else if(isRelay){relDef=oRelDef-5*factor}
+    else if (oRelDef<0){relDef=oRelDef*2+100*(Math.max(oRelDef,-2))}
+    else if(isRelay){relDef=oRelDef-30-5*factor}
     else {
-      const miDistance=ptSetMiDistance(G,enemyControl,CId,5)
-      factor=Math.min(factor,5-miDistance,0)
-      relDef=(oRelDef-4*factor)*(factor)}
+      relDef=(oRelDef-5*factor)*(factor)}
     
     
     switch (obj?.typeName) {
       case 'Infantry': w = 1; break;
       case 'Cavalry': w = 5; break;
-      case 'Artillery': w = 3; break;
+      case 'Artillery': w = 4; break;
       case 'Swift_Artillery': w = 4; break;
       case 'Relay': w = 2; break;
       case 'Swift_Relay': w = 3; break;
     }
     return sum + w * relDef
   }, 0)
+
+  return totalSum+300*(minFrontRelDef?(minFrontRelDef-25):0)
 }
 
 
@@ -597,25 +604,29 @@ function ptSetDistance(set: CellID[], pt: CellID): number {
   return distance;
 }
 //measure direct distance, not block by mountain
-function ptSetMiDistance(G:GameState,set: CellID[], pt: CellID,mDistance:number=Math.max(BoardSize.mx,BoardSize.my)): number {
+function ptSetPathDistance(G:GameState,set: CellID[], pt: CellID,mDistance:number=Math.max(BoardSize.mx,BoardSize.my)): number {
+  if(set.includes(pt)){return 0}
   const pos=CId2Pos(pt)
-  let mountainInDis=Array(9).fill(false) //i+3*j+4
+  let endSearch=false
+  let searchRange = [pt];
   for (let dis = 1; dis <= mDistance; dis++) {
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
-        if ((i !== 0 || j !== 0)&&!mountainInDis[i+3*j+4]) {
-          
-          let cx = pos.x + dis * i;
-          let cy = pos.y + dis * j;
-          let cCId = Pos2CId(cx, cy);
-          if(cCId>=0){
-          if(G.places[cCId]?.placeType==='Mountain'){mountainInDis[i+3*j+4]=true}
-          if(set.includes(cCId)){return dis}
-          }
         
-        }}}
+      //for each steps target cell is empty and is not mountain,
+      // let result be 1 block larger
+      searchRange = G.cells
+        .map((_, id) =>{
+          if(NaiveDistance(pos, CId2Pos(id)) <= dis &&
+            G.places[id]?.placeType !== 'Mountain' &&
+            ptSetDisLessThan(searchRange, id)){
+              if (set.includes(id)){endSearch=true}
+              return id
+            }
+            else return null
+          })
+        .filter(nonNull) as CellID[];
+      if(endSearch){return dis}
+    }
     
-  }
    
   return mDistance;
 }

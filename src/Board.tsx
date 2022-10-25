@@ -398,7 +398,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     <div id="PlayUI">
       {/* how many units left */}
 
-      <p>
+      <div>
         <label>Turn {ctx.turn} Over All:</label>
 
         <div
@@ -412,7 +412,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           {overAllUnits(opponentID)}
         </div>
         <label>(click to toggle Turf View)</label>
-      </p>
+      </div>
 
       {/* turn info */}
       <p>
@@ -485,7 +485,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
                     {spanBGColor(
                       <>
                         {obj.objRender + obj.typeName},<br />
-                        <span title="Attack">⚔️: {obj.objType === 'Cavalry' ? '4(+3)' : obj.offense} </span>
+                        <span title="Attack">⚔️: {obj.objType === 'Cavalry' ? '4(⚡:7)' : obj.offense} </span>
                         <span title="Defense">🛡️: {obj.defense} </span>
                         <span title="Range">🎯: {obj.range} </span>
                         <span title="Speed">🐴: {obj.speed} </span>

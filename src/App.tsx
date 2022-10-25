@@ -1,5 +1,5 @@
 import { Client } from 'boardgame.io/react';
-import { aiConfig, dualPlayerID, GameState, Kriegspiel } from './Game';
+import { aiConfig, dualPlayerID, GameState, Kriegspiel, P_ID } from './Game';
 import { Local } from 'boardgame.io/multiplayer';
 import { Board } from './Board';
 import { MCTSBot, RandomBot } from 'boardgame.io/ai';
@@ -7,8 +7,8 @@ import { Ctx, MoveFn, State } from 'boardgame.io';
 import produce from "immer"
 import { BotAction } from 'boardgame.io/dist/types/src/ai/bot';
 import { Node } from 'boardgame.io/dist/types/src/ai/mcts-bot';
-import { useEffect, useRef, useState } from 'react';
-//import { CreateGameReducer } from 'boardgame.io/dist/types/packages/internal';
+import {  useRef, useState } from 'react';
+
 
 
 
@@ -16,16 +16,15 @@ class CustomMCTSBot extends MCTSBot {
   constructor({ game, objectScores, ...config }: any) {
     super({ game, ...config });
     this.scoreFuns = {}
-
+    const getScore=(_state: State)=>{
+      return Object.keys(this.scoreFuns).reduce((score, key) => {
+        const objectScore: any = this.scoreFuns[key];
+        return score + objectScore.weight * objectScore.checker(_state.G, _state.ctx);
+      }, 0.0)
+    }
     this.playout = function ({ state, ...node }) {
 
-      const scoreFuns = this.scoreFuns;
-      function getScore(_state: State) {
-        return Object.keys(scoreFuns).reduce((score, key) => {
-          const objectScore: any = scoreFuns[key];
-          return score + objectScore.weight * objectScore.checker(_state.G, _state.ctx);
-        }, 0.0)
-      }
+      
       let turnNum = state.ctx.turn
       const depth = Math.min(Math.ceil(turnNum / 10), (this.playoutDepth as number))
       let totalScore = 0
@@ -120,13 +119,18 @@ class CustomMCTSBot extends MCTSBot {
       this.scoreFuns = objectScores(G, ctx, playerID)
       const scoreFuns = this.scoreFuns
       const actions = this.enumerate(G, ctx, playerID);
+      let currentValue= getScore(state);
+      const moves=actions.filter((act)=>act.payload.type==="movePiece");
+      const atks=actions.filter((act)=>act.payload.type==="attack")
+      const endTurn=actions.filter((act)=>act.payload.type==="endTurn")
       /* let numIterations = this.getOpt('iterations');
       if (typeof this.iterations === 'function') {
         numIterations = this.iterations(state.G, state.ctx);
       } */
+      
       function naiveExpand(id: number): Node {
 
-        const action = actions[id];
+        const action = moves[id];
         const nState = naiveReducer(state, action)
         const nNode = {
           state: nState,
@@ -140,22 +144,38 @@ class CustomMCTSBot extends MCTSBot {
 
         return nNode;
       }
+      function naiveAction(action:BotAction){
+        const metadata:Node={
+          state: state,
+          parentAction: action,
+          actions: [],
+          objectives: [],
+          children: [],
+          visits: 0,
+          value: 0,
+        }
+        return {action,metadata}
+      }
       function compareScoreLst(state1: State, state2: State) {
-        return Object.keys(scoreFuns).map((key) => {
+        let result:string[]=[]
+         Object.keys(scoreFuns).forEach((key) => {
           const objectScore: any = scoreFuns[key];
           const different = objectScore.checker(state2.G, state2.ctx) - objectScore.checker(state1.G, state1.ctx)
           let sign = ''
-          if (different === 0) { return '' }
-          else if (different > 0) { sign = '✔️' }
+          if (different !== 0) 
+          { if (different > 0) { sign = '✔️' }
           else { sign = '❌' }
-          return key + sign + ' : ' + different;
+          result.push(key + sign + ' : ' + different);}
         })
+        return result
       }
+      
 
-      const moveLength = actions.length
+      const moveLength = moves.length
       
       return new Promise((resolve) => {
         let myCounter = 0
+        this.iterationCounter = 0;
         const iteration = () => {
           const id = this.iterationCounter
           const child = naiveExpand(id);
@@ -164,25 +184,43 @@ class CustomMCTSBot extends MCTSBot {
             child.value = value.score;
             myCounter++;
             this.iterationCounter++;
-            if (selectedChild == null || child.value > selectedChild.value) {
+            if ( child.value > currentValue) {
               selectedChild = child;
+              currentValue=child.value;
             }
 
             if (myCounter < moveLength) {
               iteration();
             } else {
-              console.log('run ' + this.iterationCounter + ' times')
-              console.log('Player:'+state.ctx.currentPlayer+" value: " + selectedChild.value)
-              console.log(compareScoreLst(state, selectedChild.state))
-              const action = (selectedChild && selectedChild.parentAction) as BotAction;
-              const metadata = selectedChild as Node;
-              resolve({ action, metadata });
+              getResult()
             }
           })
         };
+         const getResult=()=>{
+          console.log('run ' + this.iterationCounter + ' times')
+                if(selectedChild)
+                {
+                  console.log('Player:'+state.ctx.currentPlayer+" value: " + selectedChild.value)
+                console.log(compareScoreLst(state, selectedChild.state))
+                const action = (selectedChild && selectedChild.parentAction) as BotAction;
+                const metadata = selectedChild as Node;
+                resolve({ action, metadata });
+                }
+                else{
+                  console.log('No better moves');
+                  if (atks.length>0){
+                    let id=this.random(atks.length)
+                    resolve(naiveAction(atks[id])) }
+                  else {resolve(naiveAction(endTurn[0])) }
+                }
+        }
 
-        this.iterationCounter = 0;
-        iteration()
+        
+        if (myCounter < moveLength) {
+          iteration();
+        } else {
+          getResult()
+        }
         /* if (this.getOpt('async')) {
           const asyncIteration = () => {
             if (this.iterationCounter < numIterations) {
@@ -207,16 +245,16 @@ class CustomMCTSBot extends MCTSBot {
   private scoreFuns: Record<string, { weight: number, checker: (G: any, ctx: Ctx) => number }>
 }
 
-function naiveReducer({ G, ctx, ...state }: any, move: any) {
+function naiveReducer({ G, ctx, ...state }: State, action: BotAction) {
   let nG = G
   const game = Kriegspiel
-  if (move.type === "GAME_EVENT" && move.payload.type === 'endTurn') {
+  if (action?.type === "GAME_EVENT" && action?.payload.type === 'endTurn') {
     const turnBegin = game.turn?.onBegin
     const turnEnd = game.turn?.onEnd
     let nCtx = ctx
     if (turnBegin && turnEnd) {
       nG = produce(nG, (oG: GameState) => { turnEnd(oG, ctx) })
-      nCtx = { ...ctx, currentPlayer: dualPlayerID(ctx.currentPlayer) }
+      nCtx = { ...ctx, currentPlayer: dualPlayerID(ctx.currentPlayer as P_ID) }
       nG = produce(nG, (oG: GameState) => { turnBegin(oG, nCtx) })
     }
     console.log("changePlayer")
@@ -224,10 +262,10 @@ function naiveReducer({ G, ctx, ...state }: any, move: any) {
   }
   else {
 
-    if (move.type === "MAKE_MOVE") {
+    if (action.type === "MAKE_MOVE") {
 
-      const moveType = move.payload.type as string
-      const args = move.payload.args
+      const moveType = action.payload.type as string
+      const args = action.payload.args
       const moveFunction = game.moves && game.moves[moveType] as MoveFn
       if (moveFunction) {
 
@@ -296,6 +334,9 @@ function KriegspielClient(p0: aiType, p1: aiType) {
 
 const App = () => {
   const [ai, setAI] = useState<[aiType, aiType]>(['Player', 'Player'])
+  const startGame=useRef(false)
+  const p0AI=useRef('Player')
+  const p1AI=useRef('Player')
   const GameClient = KriegspielClient(ai[0], ai[1])
   let pID = undefined
   if (ai[0]!=='Player' && ai[1]==='Player') { pID = '1' }
@@ -303,20 +344,24 @@ const App = () => {
   return (
     <div>
       <h1>Guy Debord's Kriegspiel</h1>
-      <p>
-      <label>Bule</label>
-      <select onChange={(e) => setAI([e.target.value, ai[1]])}>
+      <form >
+      <label>Blue</label>
+      <select disabled={startGame.current} onChange={(e)=>{p0AI.current=e.target.value}} >
+        {['Player', 'RandomBot', 'AdvancedBot'].map((name) =>
+          <option key={name} value={name}>{name}</option>
+        )}
+      </select >
+      <label> Orange</label>
+      <select disabled={startGame.current} onChange={(e)=>{p1AI.current=e.target.value}} >
         {['Player', 'RandomBot', 'AdvancedBot'].map((name) =>
           <option key={name} value={name}>{name}</option>
         )}
       </select>
-      <label>Orange</label>
-      <select onChange={(e) => setAI([ai[0],e.target.value])}>
-        {['Player', 'RandomBot', 'AdvancedBot'].map((name) =>
-          <option key={name} value={name}>{name}</option>
-        )}
-      </select>
-      </p>
+      <input disabled={startGame.current} type='button' value='Start' onClick={()=>{
+        startGame.current=true
+        setAI([p0AI.current,p1AI.current])
+        }}/>
+      </form>
       <GameClient playerID={pID} />
       {/* <KriegspielClient playerID="1" /> */}
     </div>
