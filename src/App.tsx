@@ -1,5 +1,5 @@
 import { Client } from 'boardgame.io/react';
-import { aiConfig, dualPlayerID, GameState, Kriegspiel, P_ID } from './Game';
+import { aiConfig, dualPlayerID, exportGame, GameState, Kriegspiel, loadGame, P_ID } from './Game';
 import { Local } from 'boardgame.io/multiplayer';
 import { Board } from './Board';
 import { MCTSBot, RandomBot } from 'boardgame.io/ai';
@@ -306,7 +306,7 @@ function getAI(t: aiType) {
     default: return undefined
   }
 }
-function KriegspielClient(p0: aiType, p1: aiType) {
+function KriegspielClient(setUp:string,p0: aiType, p1: aiType) {
   let multConfig = undefined  
   if (p0!=='Player' || p1!=='Player') {
     const bot0= p0!=='Player'?{'0':getAI(p0)}:{}
@@ -320,8 +320,14 @@ function KriegspielClient(p0: aiType, p1: aiType) {
         }
       })
   }
+  let game=Kriegspiel
+  if(setUp!==''){
+    game={...game,setup:(ctx) => {
+      return loadGame(setUp, ctx);
+    },}
+  }
   return Client({
-    game: Kriegspiel,
+    game: game,
     board: Board,
     debug: { collapseOnLoad: true },
     multiplayer: multConfig
@@ -334,10 +340,11 @@ function KriegspielClient(p0: aiType, p1: aiType) {
 
 const App = () => {
   const [ai, setAI] = useState<[aiType, aiType]>(['Player', 'Player'])
+  const gameData=useRef<string>('')
   const startGame=useRef(false)
   const p0AI=useRef('Player')
   const p1AI=useRef('Player')
-  const GameClient = KriegspielClient(ai[0], ai[1])
+  const GameClient = KriegspielClient(gameData.current,ai[0], ai[1])
   let pID = undefined
   if (ai[0]!=='Player' && ai[1]==='Player') { pID = '1' }
   if (ai[1]!=='Player' && ai[0]==='Player') { pID = '0' }
@@ -345,25 +352,36 @@ const App = () => {
     <div>
       <h1>Guy Debord's Kriegspiel</h1>
       <form >
-      <label>Blue</label>
+      <label>Blue: </label>
       <select disabled={startGame.current} onChange={(e)=>{p0AI.current=e.target.value}} >
         {['Player', 'RandomBot', 'AdvancedBot'].map((name) =>
           <option key={name} value={name}>{name}</option>
         )}
       </select >
-      <label> Orange</label>
+      <label> Orange: </label>
       <select disabled={startGame.current} onChange={(e)=>{p1AI.current=e.target.value}} >
         {['Player', 'RandomBot', 'AdvancedBot'].map((name) =>
           <option key={name} value={name}>{name}</option>
         )}
       </select>
+      <label> Setup: </label>
+      <input
+          disabled={startGame.current}
+          type='text'
+          name="gameData"
+          //value={gameData.current}
+          onChange={(e) => gameData.current=e.target.value}
+        />
       <input disabled={startGame.current} type='button' value='Start' onClick={()=>{
         startGame.current=true
         setAI([p0AI.current,p1AI.current])
         }}/>
       </form>
       <GameClient playerID={pID} />
-      {/* <KriegspielClient playerID="1" /> */}
+      
+      
+
+      
     </div>
   );
 }

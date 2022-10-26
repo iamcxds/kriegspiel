@@ -627,6 +627,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             navigator.clipboard.writeText(gameData);
           }}
         />
+        
         <input type="button" value="Remove Data" onClick={() => setGameData('')} />
       </form>
     </div>
@@ -708,6 +709,13 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
                 }}
               />
             </p>
+            <input
+          type="button"
+          value="Export and Copy Game Data"
+          onClick={() => {
+            navigator.clipboard.writeText(exportGame(G));
+          }}
+        />
           </div>
         </div>
       </main>

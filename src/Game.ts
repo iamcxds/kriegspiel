@@ -71,7 +71,7 @@ export const aiConfig = {
     return {
 
       noUnsupply:{
-        weight:1000,
+        weight:1500,
         checker: (G: GameState, ctx: Ctx) => {
           const unSupplyNum=G.cells.filter((obj)=>obj&&obj.belong===cPlayer&&obj.objType!=='Relay'&&!obj.supplied).length
           return -unSupplyNum
@@ -114,7 +114,7 @@ export const aiConfig = {
         checker: (G: GameState, ctx: Ctx) => { return -totalStrongHold(G, opPlayer,(id)=>opFrontDisLst[id]) }
       },
       lessOpDef: {
-        weight: 38,
+        weight: 20,
         checker: (G: GameState, ctx: Ctx) => { return -totalRelDef(G, opPlayer,(id)=>opFrontDisLst[id]) }
       },
 
@@ -297,7 +297,7 @@ function totalRelDef(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number)
     const oRelDef=G.controlArea[CId][pId]+addDef
     const factor=5-frontDist
     //get minimal RelDef in frontLine
-    if(frontDist<=3&&(!minFrontRelDef||oRelDef<minFrontRelDef)){minFrontRelDef=oRelDef}
+    if(frontDist<=3&&(minFrontRelDef===undefined||oRelDef<minFrontRelDef)){minFrontRelDef=oRelDef}
     //back line
     if (frontDist>5){relDef=isRelay?1:factor}
     //if is in danger
