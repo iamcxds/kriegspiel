@@ -118,8 +118,8 @@ export const PixiBoard = ({ G, ctx, moves, isActive, events, ...props }: GamePro
        nz=nz+0.4
     }
     return <>
-    {horse&&horse(props)}
     <Body position={props.position} z={nz}/>
+    {horse&&horse(props)}
     </>
     
   }
