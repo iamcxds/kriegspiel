@@ -369,7 +369,6 @@ const App = () => {
           disabled={startGame.current}
           type='text'
           name="gameData"
-          //value={gameData.current}
           onChange={(e) => gameData.current=e.target.value}
         />
       <input disabled={startGame.current} type='button' value='Start' onClick={()=>{

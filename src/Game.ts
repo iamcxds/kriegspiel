@@ -285,7 +285,6 @@ function totalRelDef(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number)
   const totalSum=filterCId(G.cells, (obj) => obj && obj.belong === pId).reduce((sum, CId) => {
     const obj = G.cells[CId]
     const isRelay=obj?.objType==='Relay'
-    let w = 1
     let relDef = 1 
     let addDef = 0
     const stronghold=G.places[CId]
@@ -307,18 +306,23 @@ function totalRelDef(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number)
       relDef=(oRelDef-5*factor)*(factor)}
     
     
-    switch (obj?.typeName) {
-      case 'Infantry': w = 1; break;
-      case 'Cavalry': w = 5; break;
-      case 'Artillery': w = 4; break;
-      case 'Swift_Artillery': w = 4; break;
-      case 'Relay': w = 2; break;
-      case 'Swift_Relay': w = 3; break;
-    }
+    const w=typeValue(obj?.objType)
     return sum + w * relDef
   }, 0)
 
   return totalSum+300*(minFrontRelDef?(minFrontRelDef-25):0)
+}
+function typeValue(type?:ObjType){
+  let w=1
+  switch (type) {
+    case 'Infantry': w = 1; break;
+    case 'Cavalry': w = 5; break;
+    case 'Artillery': w = 4; break;
+    case 'Swift_Artillery': w = 4; break;
+    case 'Relay': w = 2; break;
+    case 'Swift_Relay': w = 3; break;
+  }
+  return w
 }
 
 
