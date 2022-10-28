@@ -310,7 +310,7 @@ function totalRelDef(G: GameState, pId: P_ID,frontDistFun: (CId:CellID)=>number)
     return sum + w * relDef
   }, 0)
 
-  return totalSum+300*(minFrontRelDef?(minFrontRelDef-25):0)
+  return totalSum+300*(minFrontRelDef!==undefined?(minFrontRelDef-25):0)
 }
 function typeValue(type?:ObjType){
   let w=1

@@ -423,13 +423,13 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           onClick={() => {
             setTurfMode(!turfMode);
           }}
-          style={{ cursor: 'pointer' }}
+          className='turfCursor'
         >
           {overAllUnits(myID)}
           <br />
           {overAllUnits(opponentID)}
         </div>
-        <label>(click to toggle Turf View)</label>
+        <label>(👆 click to toggle Turf View)</label>
       </div>
 
       {/* turn info */}
@@ -451,7 +451,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
       {/* action info */}
       <label>My Moves and Attack:</label>
-      <svg viewBox="-0.1 -0.1 6.2 1.2" onClick={props.undo} cursor="pointer">
+      <svg viewBox="-0.1 -0.1 6.2 1.2" onClick={props.undo} className='undoCursor'>
         {renderLayer((_, id) => {
           const moveEdRec = G.moveRecords[myID].map((p) => p[1]);
           const atk = G.attackRecords[myID];
@@ -482,7 +482,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           }
         }, Array(6).fill(null))}
       </svg>
-      <label>(click to undo)</label>
+      <label>(👆 click to undo)</label>
       {/* retreat info */}
       {G.forcedRetreat[currentPlayer][0] !== null && <p>🏃‍♂️💥 I must retreat my unit from attack first.</p>}
 
