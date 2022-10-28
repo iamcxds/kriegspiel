@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { BoardProps } from 'boardgame.io/react';
+import './Board.css'
 import * as Game from './Game';
 import {
   objTypeList,
@@ -106,6 +107,22 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
       const pos = CId2Pos(id);
       const colorCase = (pos.x + pos.y) % 2 === 0;
       return colorCase ? pico8Palette.light_grey : pico8Palette.white;
+    }
+  }
+
+  function getCursor(id: CellID) {
+    if (id === pickedID&&canAttack(G, ctx, id)[0]&&isActive) {
+      return 'attackCursor';
+    } else if (pickedID !== null&&isAvailable(id)) {
+      //predict supply after moving
+      const suppPred=Game.supplyPrediction(G,ctx,pickedID)
+      if (suppPred(id)) {
+        return 'moveCursor';
+      } else {
+        return 'noSupplyCursor';
+      }
+    } else {
+      return 'pointer'
     }
   }
 
@@ -315,7 +332,8 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         ))}
         {/* control */}
         {renderLayer((_, id) => (
-          <rect cursor="pointer" onClick={() => myOnClick(id)} width="1" height="1" fillOpacity="0" />
+          <rect className={getCursor(id)}
+          onClick={() => myOnClick(id)} width="1" height="1" fillOpacity="0" />
         ))}
       </g>
     </svg>
@@ -420,7 +438,10 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         <button
           disabled={!isActive}
           onClick={() => {
-              events.endTurn && events.endTurn();            
+            const noMoreAct=G.cells.filter((_,CId)=>canAttack(G,ctx,CId)[0]||canPick(G,ctx,CId)).length===0
+            const text='There are still moves or attacks available, end turn anyway?'
+            if(noMoreAct||window.confirm(text))
+              {events.endTurn && events.endTurn();}           
           }}
         >
           End Turn
