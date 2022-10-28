@@ -66,7 +66,7 @@ export const PixiBoard = ({ G, ctx, moves, isActive, events, ...props }: GamePro
 
   //const knTexture = PIXI.Texture.from(loadAssets("Mini_Characters/char_03.png"));
   
-  const Horse = newSprite("horse.png",stageScale /500 ,[0.6,0.6])
+  const Horse = newSprite("horse.png",stageScale /500 ,[0.5,0.6])
   
   
   //const tileTexture = PIXI.Texture.from(loadAssets("IsoTiles/Enviroument/Spring/grass.png"));
