@@ -18,13 +18,13 @@ import {
   getBattleFactor,
   getChargedCavalries,
   getDirSuppliedLines,
-  getSuppliedCells,
+  supplyPrediction,
   exportGame,
 } from './Game';
 
 import { useGesture } from '@use-gesture/react';
 
-interface GameProps extends BoardProps<GameState> {}
+interface GameProps extends BoardProps<GameState> { }
 
 
 
@@ -66,7 +66,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
           break;
         case id:
-          if (canAttack(G, ctx, id)[0]&&isActive) {
+          if (canAttack(G, ctx, id)[0] && isActive) {
             moves.attack(id);
           }
           pickUpID(null);
@@ -91,9 +91,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     const strongholdColor = G.places[id]?.belong;
     if (id === pickedID) {
       return pico8Palette.dark_purple;
-    } else if (pickedID !== null&&isAvailable(id)) {
+    } else if (pickedID !== null && isAvailable(id)) {
       //predict supply after moving
-      const suppPred=Game.supplyPrediction(G,ctx,pickedID)
+      const suppPred = supplyPrediction(G, ctx, pickedID)
       if (suppPred(id)) {
         return pico8Palette.green;
       } else {
@@ -111,11 +111,11 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   }
 
   function getCursor(id: CellID) {
-    if (id === pickedID&&canAttack(G, ctx, id)[0]&&isActive) {
+    if (id === pickedID && canAttack(G, ctx, id)[0] && isActive) {
       return 'attackCursor';
-    } else if (pickedID !== null&&isAvailable(id)) {
+    } else if (pickedID !== null && isAvailable(id)) {
       //predict supply after moving
-      const suppPred=Game.supplyPrediction(G,ctx,pickedID)
+      const suppPred = supplyPrediction(G, ctx, pickedID)
       if (suppPred(id)) {
         return 'moveCursor';
       } else {
@@ -231,11 +231,12 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
   //render Main board
 
   const gameBoard = (
-    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`}>
+    <svg viewBox={`-0.6 -0.6 ${BoardSize.mx + 1.2} ${BoardSize.my + 1.2}`} 
+    style={{touchAction: 'none'}}
+    ref={boardRef}>
       <g
-        transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${
-          mapPos.x - BoardSize.mx / 2
-        } ${mapPos.y - BoardSize.my / 2})`}
+        transform={`translate(${BoardSize.mx / 2} ${BoardSize.my / 2})  scale(${mapScale}) translate(${mapPos.x - BoardSize.mx / 2
+          } ${mapPos.y - BoardSize.my / 2})`}
       >
         <rect
           x={-0.6}
@@ -326,14 +327,14 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
           G.cells,
         )}
         {/* battle info indication */}
-        {pickedID!==null&&renderCombatEffect(pickedID)}
+        {pickedID !== null && renderCombatEffect(pickedID)}
         {G.cells.map((_, id) => (
           <>{renderCombatResult(id)}</>
         ))}
         {/* control */}
         {renderLayer((_, id) => (
           <rect className={getCursor(id)}
-          onClick={() => myOnClick(id)} width="1" height="1" fillOpacity="0" />
+            onClick={() => myOnClick(id)} width="1" height="1" fillOpacity="0" />
         ))}
       </g>
     </svg>
@@ -373,20 +374,20 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
     return (
       <table style={{ marginLeft: 'auto', marginRight: 'auto' }}>
         <tbody>
-        {obj?.belong !== opponentID ? (
-          // if choose my unit or empty place
-          <tr>
-            {myDefTd}
-            {eOffTd}
-          </tr>
-        ) : null}
-        {obj?.belong !== myID ? (
-          // if choose enemy unit or empty place
-          <tr>
-            {myOffTd}
-            {eDefTd}
-          </tr>
-        ) : null}
+          {obj?.belong !== opponentID ? (
+            // if choose my unit or empty place
+            <tr>
+              {myDefTd}
+              {eOffTd}
+            </tr>
+          ) : null}
+          {obj?.belong !== myID ? (
+            // if choose enemy unit or empty place
+            <tr>
+              {myOffTd}
+              {eDefTd}
+            </tr>
+          ) : null}
         </tbody>
       </table>
     );
@@ -438,10 +439,9 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
         <button
           disabled={!isActive}
           onClick={() => {
-            const noMoreAct=G.cells.filter((_,CId)=>canAttack(G,ctx,CId)[0]||canPick(G,ctx,CId)).length===0
-            const text='There are still moves or attacks available, end turn anyway?'
-            if(noMoreAct||window.confirm(text))
-              {events.endTurn && events.endTurn();}           
+            const noMoreAct = G.cells.filter((_, CId) => canAttack(G, ctx, CId)[0] || canPick(G, ctx, CId)).length === 0
+            const text = 'There are still moves or attacks available, end turn anyway?'
+            if (noMoreAct || window.confirm(text)) { events.endTurn && events.endTurn(); }
           }}
         >
           End Turn
@@ -506,7 +506,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
                     {spanBGColor(
                       <>
                         {obj.objRender + obj.typeName},<br />
-                        <span title="Attack">⚔️: {obj.objType === 'Cavalry' ? '4(⚡:7)' : obj.offense} </span>
+                        <span title="Attack">⚔️: {obj.objType === 'Cavalry' ? '4(⚡: 7)' : obj.offense} </span>
                         <span title="Defense">🛡️: {obj.defense} </span>
                         <span title="Range">🎯: {obj.range} </span>
                         <span title="Speed">🐴: {obj.speed} </span>
@@ -648,7 +648,7 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
             navigator.clipboard.writeText(gameData);
           }}
         />
-        
+
         <input type="button" value="Remove Data" onClick={() => setGameData('')} />
       </form>
     </div>
@@ -667,81 +667,80 @@ export const Board = ({ G, ctx, moves, isActive, events, ...props }: GameProps) 
 
   // render all
 
-  
-    return (
-      <main>
+
+  return (
+    <main>
+      <div
+        style={{
+          height: 'auto',
+          color: 'black',
+          textAlign: 'center',
+          fontFamily: "'Lato', sans-serif",
+          display: 'flex',
+          flexWrap: 'wrap',
+        }}
+      >
         <div
           style={{
-            height: 'auto',
-            color: 'black',
-            textAlign: 'center',
-            fontFamily: "'Lato', sans-serif",
-            display: 'flex',
-            flexWrap: 'wrap',
+            maxHeight: '100vh',
+            minWidth: '55vw',
+            flex: '4',
+            maxWidth: '122vh',
+            border: `2px solid ${pico8Palette.dark_green}`,
+            backgroundColor: `${pico8Palette.white}`,
           }}
         >
-          <div
-            ref={boardRef}
-            style={{
-              maxHeight: '100vh',
-              minWidth: '55vw',
-              flex: '4',
-              maxWidth: '122vh',
-              border: `2px solid ${pico8Palette.dark_green}`,
-              backgroundColor: `${pico8Palette.white}`,
-              touchAction: 'none',
-            }}
-          >
-            {/* svg Game Board */}
-            {gameBoard}
-          </div>
-
-          {/* info UI */}
-          <div
-            style={{
-              minWidth: '250px',
-              flex: '1',
-              maxWidth: '100vw',
-              border: `2px solid ${pico8Palette.dark_green}`,
-              backgroundColor: `${pico8Palette.white}`,
-            }}
-          >
-            {editMode ? sideBarEdit : sideBarPlay}
-
-            <p>
-              {opEditMode && (
-                <>
-                  Other player is editing.
-                  <br />
-                </>
-              )}
-              More information <a href="https://github.com/iamcxds/kriegspiel">here</a>.{' '}
-              <input
-                type="button"
-                value="Edit Mode"
-                onClick={() => {
-                  if (!editMode) {
-                    
-                    events.setStage&&events.setStage('edition');
-                    
-                  } else {
-                    events.endStage&&events.endStage();
-                  }
-                }}
-              />
-            </p>
-            <input
-          type="button"
-          value="Export and Copy Game Data"
-          onClick={() => {
-            navigator.clipboard.writeText(exportGame(G));
-          }}
-        />
-          </div>
+          {/* svg Game Board */}
+          {gameBoard}
         </div>
-      </main>
-    );
-  };
+
+        {/* info UI */}
+        <div
+          style={{
+            minWidth: '250px',
+            flex: '1',
+            maxWidth: '100vw',
+            border: `2px solid ${pico8Palette.dark_green}`,
+            backgroundColor: `${pico8Palette.white}`,
+          }}
+        >
+          {editMode ? sideBarEdit : sideBarPlay}
+
+          <p>
+            {opEditMode && (
+              <>
+                Other player is editing.
+                <br />
+              </>
+            )}
+            More information <a href="https://github.com/iamcxds/kriegspiel">here</a>.{' '}
+            <input
+              type="button"
+              value="Edit Mode"
+              onClick={() => {
+                if (!editMode) {
+
+                  events.setStage && events.setStage('edition');
+
+                } else {
+                  events.endStage && events.endStage();
+                }
+              }}
+            />
+            <input
+              type="button"
+              value="Export and Copy Game Data"
+              onClick={() => {
+                navigator.clipboard.writeText(exportGame(G));
+              }}
+            />
+          </p>
+
+        </div>
+      </div>
+    </main>
+  );
+};
 
 function renderLayer<T>(
   objRender: (a: T, b: CellID) => React.ReactNode,
